@@ -1,0 +1,21 @@
+{
+  "name": "discord-qa-bot",
+  "version": "1.0.0",
+  "description": "Discord QA Bot with web dashboard",
+  "private": true,
+  "scripts": {
+    "dev:web": "cd web && npm run dev",
+    "build:web": "cd web && npm run build",
+    "deploy:web": "cd web && npm run deploy:web",
+    "install:web": "cd web && npm install"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "qa",
+    "firebase",
+    "whop"
+  ],
+  "author": "",
+  "license": "MIT"
+}
