@@ -1,0 +1,40 @@
+{
+  "name": "discord-qa-bot",
+  "version": "1.0.0",
+  "description": "Discord Q&A bot with knowledge base management",
+  "main": "index.js",
+  "scripts": {
+    "dev:server": "nodemon --exec ts-node src/server/index.ts",
+    "build": "tsc",
+    "start": "node dist/server/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/athul-124/discord-qa-bot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/athul-124/discord-qa-bot/issues"
+  },
+  "homepage": "https://github.com/athul-124/discord-qa-bot#readme",
+  "dependencies": {
+    "csv-parser": "^3.2.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.5.0",
+    "multer": "^2.0.2",
+    "pdf-parse": "^2.4.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.4",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.9.1",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
