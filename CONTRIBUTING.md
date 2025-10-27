@@ -1,330 +1,214 @@
-# Contributing to Discord QA Bot
+# Contributing to Discord Q&A Bot
 
-Thank you for your interest in contributing! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to the Discord Q&A Bot! This document provides guidelines and instructions for contributing.
 
 ## Code of Conduct
 
 - Be respectful and inclusive
-- Provide constructive feedback
-- Focus on what is best for the community
-- Show empathy towards other contributors
+- Welcome newcomers and help them learn
+- Focus on constructive feedback
+- Follow the project's code style and conventions
 
 ## Getting Started
 
-### Prerequisites
-
-- Node.js 18 or higher
-- npm or yarn
-- Git
-- Discord Developer Account
-- Firebase Project (for testing)
-
-### Setup Development Environment
-
-1. Fork the repository on GitHub
-2. Clone your fork locally:
+1. Fork the repository
+2. Clone your fork:
    ```bash
-   git clone https://github.com/your-username/discord-qa-bot.git
+   git clone https://github.com/YOUR_USERNAME/discord-qa-bot.git
    cd discord-qa-bot
    ```
-
 3. Install dependencies:
    ```bash
    npm install
    ```
-
-4. Copy `.env.example` to `.env` and fill in your credentials:
+4. Create a feature branch:
    ```bash
-   cp .env.example .env
+   git checkout -b feature/your-feature-name
    ```
 
-5. Set up your Discord bot (see README for detailed instructions)
+## Development Setup
 
-6. Deploy commands to your test server:
-   ```bash
-   npm run build
-   npm run discord:deploy
-   ```
-
-7. Run the bot in development mode:
+1. Copy `.env.example` to `.env` and configure your environment
+2. Obtain Discord bot token and Firebase credentials
+3. Run in development mode:
    ```bash
    npm run dev
    ```
 
-## Development Workflow
+## Code Style
 
-### Branch Strategy
+We use ESLint and Prettier for code formatting:
 
-- `main` - Production-ready code
-- `develop` - Integration branch for features
-- `feat/*` - New features
-- `fix/*` - Bug fixes
-- `docs/*` - Documentation updates
-- `refactor/*` - Code refactoring
+```bash
+# Run linter
+npm run lint
 
-### Making Changes
-
-1. Create a new branch:
-   ```bash
-   git checkout -b feat/your-feature-name
-   ```
-
-2. Make your changes following our coding standards
-
-3. Build and test:
-   ```bash
-   npm run build
-   npm run dev  # Test manually
-   ```
-
-4. Commit your changes:
-   ```bash
-   git add .
-   git commit -m "feat: add your feature description"
-   ```
-
-5. Push to your fork:
-   ```bash
-   git push origin feat/your-feature-name
-   ```
-
-6. Open a Pull Request on GitHub
-
-### Commit Message Guidelines
-
-We follow [Conventional Commits](https://www.conventionalcommits.org/):
-
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `docs:` - Documentation changes
-- `style:` - Code style changes (formatting, etc.)
-- `refactor:` - Code refactoring
-- `test:` - Adding or updating tests
-- `chore:` - Maintenance tasks
-
-Examples:
-```
-feat: add knowledge base integration
-fix: resolve message queue concurrency issue
-docs: update README with deployment instructions
-refactor: simplify config service error handling
+# Format code
+npm run format
 ```
 
-## Coding Standards
+### TypeScript Guidelines
 
-### TypeScript
-
-- Use TypeScript for all new code
-- Enable strict mode
-- Provide proper type annotations
-- Avoid `any` type unless absolutely necessary
-
-### Code Style
-
-- Use 2 spaces for indentation
-- Use single quotes for strings
-- Add trailing commas in objects/arrays
-- Use async/await instead of callbacks
-- Use arrow functions for inline functions
+- Use strict TypeScript types (avoid `any` when possible)
+- Define interfaces for all data structures
+- Use async/await over promises
+- Document complex functions with JSDoc comments
 
 ### Naming Conventions
 
-- **Files**: camelCase (e.g., `configService.ts`)
-- **Classes**: PascalCase (e.g., `ConfigService`)
-- **Functions**: camelCase (e.g., `getGuildConfig`)
-- **Constants**: UPPER_SNAKE_CASE (e.g., `DEFAULT_LIMIT`)
+- **Files**: camelCase (e.g., `spamDetectionService.ts`)
+- **Classes**: PascalCase (e.g., `AdminCommands`)
+- **Functions**: camelCase (e.g., `detectSpam`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `SPAM_BASE_PATTERN`)
 - **Interfaces**: PascalCase (e.g., `GuildConfig`)
-
-### Error Handling
-
-- Always use try-catch for async operations
-- Log errors with appropriate prefixes
-- Provide user-friendly error messages
-- Never expose internal errors to users
-
-### Logging
-
-- Use consistent prefixes: `[Bot]`, `[Service]`, etc.
-- Log important operations (success and failure)
-- Use appropriate log levels:
-  - Info: Normal operations
-  - Warn: Recoverable issues
-  - Error: Failures requiring attention
-
-## Testing Guidelines
-
-### Manual Testing Checklist
-
-Before submitting a PR, test:
-
-1. ✅ Bot starts without errors
-2. ✅ Slash commands appear in Discord
-3. ✅ `/config add-channel` works
-4. ✅ `/config list-channels` shows channels
-5. ✅ Messages in configured channels get responses
-6. ✅ Messages in other channels are ignored
-7. ✅ Bot messages are ignored
-8. ✅ DMs are ignored
-9. ✅ Quota system works (simulate by setting low limit)
-10. ✅ Error handling works (disconnect Firebase, etc.)
-
-### Future: Automated Tests
-
-We plan to add:
-- Unit tests (Jest)
-- Integration tests
-- End-to-end tests
-- CI/CD pipeline
-
-## Documentation
-
-### Code Documentation
-
-- Add JSDoc comments for public functions
-- Explain complex logic with inline comments
-- Update README when adding new features
-- Keep ARCHITECTURE.md in sync with changes
-
-### Documentation Structure
-
-```
-docs/
-├── bot-setup.md          - Bot setup and configuration
-├── getting-started.md    - User guide (planned)
-├── kb-best-practices.md  - Knowledge base tips (planned)
-└── ...
-```
-
-## Pull Request Process
-
-1. **Update Documentation**
-   - Update README if adding user-facing features
-   - Update ARCHITECTURE.md if changing structure
-   - Add inline code comments for complex logic
-
-2. **Test Thoroughly**
-   - Run through manual testing checklist
-   - Test edge cases
-   - Verify error handling
-
-3. **Keep PRs Focused**
-   - One feature/fix per PR
-   - Small, reviewable changes
-   - Clear description of changes
-
-4. **PR Template**
-   ```markdown
-   ## Description
-   Brief description of changes
-
-   ## Type of Change
-   - [ ] Bug fix
-   - [ ] New feature
-   - [ ] Documentation update
-   - [ ] Refactoring
-
-   ## Testing
-   - [ ] Tested locally
-   - [ ] Manual testing checklist completed
-   - [ ] No console errors
-
-   ## Screenshots (if applicable)
-   Add screenshots for UI changes
-   ```
-
-5. **Review Process**
-   - Maintainer will review within 3-5 days
-   - Address feedback promptly
-   - Squash commits before merging
-
-## Common Tasks
-
-### Adding a New Slash Command
-
-1. Define command in `src/bot/commands.ts`:
-   ```typescript
-   new SlashCommandBuilder()
-     .setName('mycommand')
-     .setDescription('My new command')
-   ```
-
-2. Add handler in `src/bot/commandHandler.ts` or create new handler file
-
-3. Register handler in `src/bot/index.ts`:
-   ```typescript
-   if (interaction.commandName === 'mycommand') {
-     await handleMyCommand(interaction);
-   }
-   ```
-
-4. Deploy commands:
-   ```bash
-   npm run discord:deploy
-   ```
-
-### Adding a New Service
-
-1. Create file in `src/services/`:
-   ```typescript
-   // src/services/myService.ts
-   export class MyService {
-     // implementation
-   }
-   
-   export const myService = new MyService();
-   ```
-
-2. Import and use in other files:
-   ```typescript
-   import { myService } from '../services/myService';
-   ```
-
-### Adding Environment Variables
-
-1. Add to `.env.example` with placeholder
-2. Document in README
-3. Use in code:
-   ```typescript
-   const myVar = process.env.MY_VAR;
-   if (!myVar) {
-     throw new Error('MY_VAR not set');
-   }
-   ```
 
 ## Project Structure
 
 ```
-discord-qa-bot/
-├── src/
-│   ├── bot/              - Bot initialization and event handlers
-│   │   ├── index.ts      - Main entry point
-│   │   ├── commands.ts   - Command definitions
-│   │   └── commandHandler.ts - Command handlers
-│   ├── services/         - Business logic services
-│   │   ├── firebase.ts   - Firebase initialization
-│   │   ├── configService.ts - Guild configuration
-│   │   ├── usageService.ts - Usage tracking
-│   │   └── messageProcessor.ts - Message queue
-│   ├── types/            - TypeScript type definitions
-│   └── scripts/          - Utility scripts
-│       └── deployCommands.ts - Deploy slash commands
-├── docs/                 - Documentation
-├── dist/                 - Compiled JavaScript (gitignored)
-├── node_modules/         - Dependencies (gitignored)
-├── .env                  - Local environment variables (gitignored)
-├── .env.example          - Environment variable template
-├── package.json          - Dependencies and scripts
-├── tsconfig.json         - TypeScript configuration
-├── ARCHITECTURE.md       - Architecture documentation
-├── CONTRIBUTING.md       - This file
-└── README.md             - User-facing documentation
+src/
+├── index.ts              # Main entry point
+├── config/               # Configuration files
+├── types/                # TypeScript type definitions
+├── services/             # Business logic services
+├── handlers/             # Event handlers
+├── commands/             # Discord slash commands
+└── jobs/                 # Scheduled jobs
 ```
+
+## Making Changes
+
+### Adding a New Feature
+
+1. Create a new branch from `main`
+2. Implement your feature following the code style
+3. Add appropriate error handling
+4. Update documentation in README.md if needed
+5. Test your changes thoroughly
+6. Submit a pull request
+
+### Fixing a Bug
+
+1. Create an issue describing the bug (if one doesn't exist)
+2. Create a branch referencing the issue number
+3. Fix the bug with minimal changes
+4. Add tests to prevent regression
+5. Submit a pull request referencing the issue
+
+### Adding a Service
+
+When adding a new service:
+
+1. Create file in `src/services/`
+2. Follow the singleton pattern used by existing services
+3. Export a single instance
+4. Add TypeScript interfaces to `src/types/`
+5. Document public methods
+
+Example:
+```typescript
+class MyService {
+  async doSomething(): Promise<void> {
+    // Implementation
+  }
+}
+
+export const myService = new MyService();
+```
+
+### Adding a Command
+
+When adding a new slash command:
+
+1. Add command builder in `AdminCommands.getCommands()`
+2. Add handler in `AdminCommands.handleCommand()`
+3. Follow existing command patterns
+4. Add permission checks
+5. Provide user-friendly error messages
+
+## Testing
+
+Currently, the project uses manual testing. When adding features:
+
+1. Test with a real Discord bot in a test server
+2. Verify Firestore data is correctly stored
+3. Test error scenarios
+4. Verify rate limiting and API constraints
+
+Future: We plan to add automated tests.
+
+## Documentation
+
+When making changes:
+
+1. Update README.md for user-facing changes
+2. Update DEPLOYMENT.md for deployment-related changes
+3. Add JSDoc comments for complex functions
+4. Update type definitions
+
+## Pull Request Process
+
+1. **Before submitting**:
+   - Run `npm run lint` and fix any issues
+   - Run `npm run build` to ensure it compiles
+   - Test your changes thoroughly
+   - Update documentation
+
+2. **PR Title**: Use conventional commits format:
+   - `feat: Add new feature`
+   - `fix: Fix bug in spam detection`
+   - `docs: Update README`
+   - `refactor: Improve code structure`
+   - `chore: Update dependencies`
+
+3. **PR Description**: Include:
+   - What changes were made
+   - Why the changes were needed
+   - How to test the changes
+   - Screenshots (if UI-related)
+   - Related issue numbers
+
+4. **Review Process**:
+   - Maintainers will review your PR
+   - Address any feedback
+   - Once approved, your PR will be merged
+
+## Common Tasks
+
+### Adding a Firestore Collection
+
+1. Define interface in `src/types/index.ts`
+2. Add methods in `src/services/firestoreService.ts`
+3. Document the collection in README.md
+
+### Adding Environment Variables
+
+1. Add to `.env.example` with placeholder
+2. Document in README.md and DEPLOYMENT.md
+3. Update `src/config/index.ts`
+
+### Modifying Spam Detection
+
+Edit `src/services/spamDetectionService.ts`:
+- Add new patterns to `DEFAULT_SPAM_PATTERNS`
+- Modify detection logic in `detectSpam()`
+- Test with various message types
+
+## Release Process
+
+Maintainers follow this process for releases:
+
+1. Update version in `package.json`
+2. Update CHANGELOG.md
+3. Create a git tag
+4. Build and test
+5. Deploy to production
+6. Create GitHub release
 
 ## Questions?
 
 - Open an issue for bugs or feature requests
-- Start a discussion for questions or ideas
-- Email us at support@discord-qa-bot.com
+- Start a discussion for general questions
+- Check existing issues before creating new ones
 
 ## License
 

@@ -1,483 +1,270 @@
-# Implementation Summary: Discord Core
-
-This document summarizes the Discord bot core implementation completed as part of the initial development phase.
+# Implementation Summary: Moderation Analytics
 
 ## Overview
+This implementation adds comprehensive moderation analytics to the Discord Q&A bot, including automated spam filtering, trend insights, and periodic analytics summaries as specified in the ticket requirements.
 
-Built the foundational Discord bot runtime with message ingestion, guild configuration management, slash command scaffolding, and quota tracking. The bot is production-ready for basic operations and serves as a platform for future knowledge base integration.
+## ✅ Completed Features
 
-## What Was Implemented
+### 1. Spam Detection & Filtering
+- **Location**: `src/services/spamDetectionService.ts`
+- Implements regex pattern `/https?:\/\/|spam/i` for base spam detection
+- Supports customizable pattern list per server stored in Firestore
+- Default patterns include:
+  - Discord invite links
+  - "Free nitro" scams
+  - "Click here" phishing attempts
+- Runs before knowledge search in message processing pipeline
 
-### 1. Bot Runtime (`src/bot/index.ts`)
+### 2. Automated Message Deletion
+- **Location**: `src/services/moderationService.ts`
+- Deletes messages flagged as spam
+- Requires `ManageMessages` Discord permission (checked before deletion)
+- Notifies server owner or moderator via DM with detailed embed
+- Graceful handling when bot lacks permissions
 
-✅ **Discord.js v14 Client Initialization**
-- Configured with required Gateway Intents:
-  - `GatewayIntentBits.Guilds`
-  - `GatewayIntentBits.GuildMessages`
-  - `GatewayIntentBits.MessageContent`
-- Enabled Channel partials for full message support
+### 3. Moderation Logging (Firestore)
+- **Location**: `src/services/firestoreService.ts`
+- Collection: `moderationLogs`
+- Stores:
+  - Guild ID, User ID, Username
+  - Action type, Reason, Message content
+  - Channel ID, Timestamp
+  - Metadata (matched pattern, etc.)
 
-✅ **Lifecycle Event Handlers**
-- `ClientReady`: Logs bot username and guild count
-- `Error`: Logs client errors for debugging
-- `ShardReconnecting`: Logs reconnection attempts
-- `ShardDisconnect`: Warns about disconnections with codes
-- `ShardResume`: Confirms successful reconnection
+### 4. Usage Metrics Tracking
+- **Location**: `src/services/usageService.ts`
+- Collection: `usageMetrics`
+- Tracks separately:
+  - Total messages
+  - Spam messages (incremented when spam detected)
+  - Legitimate messages
+  - Questions answered
+  - Unanswered queries
+- Organized by guild and date period
 
-✅ **Graceful Shutdown**
-- `SIGINT`/`SIGTERM` handlers for clean exits
-- `unhandledRejection` handler to prevent silent failures
-- Proper client destruction on shutdown
+### 5. Trend Logging & Analysis
+- **Location**: `src/services/trendService.ts`
+- Collection: `trendLogs`
+- Captures per message:
+  - Extracted keywords (automatic, filters stop words)
+  - Response time
+  - Satisfaction indicator (stub for future implementation)
+  - Whether message was answered
+- Aggregation functions for trend summaries
 
-### 2. Message Processing Pipeline
+### 6. Daily Analytics Cron Job
+- **Location**: `src/jobs/dailyReportJob.ts`
+- Uses `node-cron` for scheduling
+- Configurable via environment variables:
+  - Schedule: `DAILY_REPORT_CRON` (default: `0 9 * * *`)
+  - Timezone: `DAILY_REPORT_TIMEZONE` (default: `UTC`)
+- Aggregates past 24h data:
+  - Top questions (with frequency counts)
+  - Top keywords
+  - Unanswered queries
+  - Spam counts
+  - Average response times
+- Sends rich embed DM to server owners
+- Handles Discord rate limits with 1-second delays between guilds
+- Runs once per guild
+- Can be force-triggered via admin command
 
-✅ **Message Filtering**
-- Ignores bot messages (prevents loops)
-- Ignores DMs (guild-only operation)
-- Ignores mention-only messages (e.g., just "@BotName")
-- Comprehensive logging for each filter decision
+### 7. Admin Commands
+- **Location**: `src/commands/adminCommands.ts`
+- All commands require Administrator permission
+- Implemented commands:
+  - `/moderation-history [limit]` - View recent moderation actions
+  - `/add-spam-pattern <pattern>` - Add custom regex pattern
+  - `/remove-spam-pattern <pattern>` - Remove custom pattern
+  - `/list-spam-patterns` - View all custom patterns
+  - `/trends [days]` - On-demand trend analysis (1-30 days)
+  - `/usage-stats` - Current day usage statistics
+  - `/force-daily-report` - Manually trigger daily report
+  - `/toggle-spam-deletion` - Enable/disable spam deletion (opt-out)
 
-✅ **Guild Configuration Check**
-- Validates guild has configuration in Firestore
-- Checks if message channel is in allowed channels list
-- Skips gracefully with logged reason if not configured
+### 8. Documentation
+- **README.md**: Comprehensive user documentation
+  - Installation instructions
+  - Required permissions (MANAGE_MESSAGES highlighted)
+  - Admin command reference
+  - Firestore collection schemas
+  - Opt-out instructions for spam deletion
+- **DEPLOYMENT.md**: Step-by-step deployment guide
+  - Discord bot setup
+  - Firebase/Firestore configuration
+  - Environment variables
+  - Multiple deployment options (PM2, Docker, Cloud)
+  - Troubleshooting guide
+- **CONTRIBUTING.md**: Development guidelines
+  - Code style and conventions
+  - Project structure
+  - How to add features
 
-✅ **Quota Verification**
-- Checks monthly usage against limit
-- Sends friendly quota exceeded message when limit reached
-- Logs quota status (current/limit) for monitoring
+## 📋 Acceptance Criteria Status
 
-✅ **Message Queue**
-- Uses `p-queue` library for concurrency control
-- Limits to 5 concurrent messages
-- Prepares for future Gemini API rate limiting
-- Queue stats available for monitoring
+✅ **Messages containing spam URLs are deleted promptly**
+- Implemented in `moderationService.handleSpamMessage()`
+- Uses regex patterns to detect spam
+- Deletes message immediately after detection
 
-✅ **Response Generation**
-- Currently sends placeholder message: "Knowledge engine coming soon!"
-- Infrastructure ready for AI integration
-- Error handling with fallback error messages
+✅ **Owner receives DM notification**
+- Implemented in `moderationService.notifyModerators()`
+- Sends rich embed with full details
+- Includes matched pattern, message content, reason
 
-### 3. Slash Commands (`/config`)
+✅ **Firestore records moderation log**
+- Implemented via `firestoreService.logModerationAction()`
+- Logs stored in `moderationLogs` collection
+- Includes timestamp and comprehensive metadata
 
-✅ **Command Registration System**
-- REST API-based deployment script
-- Support for both global and guild-specific deployment
-- Guild deployment is instant (for testing)
-- Global deployment takes up to 1 hour (for production)
+✅ **Trend aggregation cron job runs and posts summary DM/report**
+- Implemented in `dailyReportJob.ts`
+- Can be forced in dev via `/force-daily-report`
+- Sends comprehensive analytics embed to owners
+- Handles errors gracefully without exceptions
 
-✅ **Subcommands Implemented**
+✅ **Legitimate messages bypass spam filter**
+- Implemented in `messageHandler.handleMessage()`
+- Only flagged messages are deleted
+- Legitimate messages continue through normal processing
+- Trend logging occurs for all non-spam messages
 
-**`/config add-channel`**
-- Adds channel to allowed support channels
-- Validates channel is a text channel
-- Persists to Firestore via ConfigService
-- Requires "Manage Server" permission
+✅ **Usage metrics include spam counter fields**
+- Implemented in `usageService`
+- Separate tracking for spam vs legitimate messages
+- Available for reporting via `/usage-stats` command
 
-**`/config remove-channel`**
-- Removes channel from allowed list
-- Updates Firestore configuration
-- Requires "Manage Server" permission
+## 🏗️ Architecture
 
-**`/config list-channels`**
-- Lists all configured channels
-- Shows helpful message if none configured
-- Requires "Manage Server" permission
-
-**`/config set-owner`**
-- Stores owner contact information
-- Accepts email or Discord username
-- Requires "Manage Server" permission
-
-✅ **Permission Checks**
-- All commands require "Manage Server" permission
-- Guild-only (cannot be used in DMs)
-- Ephemeral responses for privacy
-
-### 4. Configuration Service (`src/services/configService.ts`)
-
-✅ **Firestore Integration**
-- Collection: `guild_configs`
-- Document ID: Guild ID
-
-✅ **CRUD Operations**
-- `getGuildConfig()`: Retrieve guild configuration
-- `addAllowedChannel()`: Add channel to allowed list
-- `removeAllowedChannel()`: Remove channel from list
-- `listAllowedChannels()`: Get all allowed channels
-- `setOwnerContact()`: Store owner contact info
-
-✅ **Data Model**
-```typescript
-{
-  guildId: string,
-  allowedChannels: string[],
-  ownerContact?: string,
-  createdAt: Date,
-  updatedAt: Date
-}
+### Message Processing Flow
+```
+Message Received
+    ↓
+Bot Message? → Return
+    ↓
+Spam Detection Check
+    ↓
+Is Spam? 
+    ├─ Yes → Delete → Log Moderation → Notify Owner → Increment Spam Count
+    └─ No  → Process → Log Trend → Increment Legitimate Count
 ```
 
-✅ **Error Handling**
-- Try-catch on all operations
-- Graceful fallbacks (returns null/empty on errors)
-- Comprehensive error logging
+### Data Storage (Firestore Collections)
+1. **guildConfigs**: Per-server configuration
+2. **moderationLogs**: Moderation action history
+3. **trendLogs**: Message trend data
+4. **usageMetrics**: Aggregated statistics
 
-### 5. Usage Service (`src/services/usageService.ts`)
+### Services Architecture
+- **firestoreService**: Centralized Firestore operations
+- **spamDetectionService**: Pattern matching logic
+- **moderationService**: Message deletion & notifications
+- **usageService**: Metrics aggregation
+- **trendService**: Keyword extraction & analysis
 
-✅ **Quota Tracking**
-- Collection: `usage_records`
-- Document ID: `{guildId}_{YYYY-MM}`
-- Default limit: 1000 queries/month (configurable)
+## 🔐 Required Permissions
 
-✅ **Operations**
-- `checkQuota()`: Verify guild under limit
-- `incrementUsage()`: Increment query count
-- `getUsageStats()`: Retrieve usage data
+The bot requires these Discord permissions:
+- **MANAGE_MESSAGES** (8192) - Required for spam deletion
+- VIEW_CHANNELS (1024)
+- SEND_MESSAGES (2048)
+- EMBED_LINKS (16384)
+- READ_MESSAGE_HISTORY (65536)
 
-✅ **Data Model**
-```typescript
-{
-  guildId: string,
-  month: string,  // "YYYY-MM"
-  count: number,
-  limit: number,
-  createdAt: Date,
-  updatedAt: Date
-}
+**Total Permission Integer**: 93248
+
+## 🚀 Deployment
+
+Multiple deployment options supported:
+1. **PM2** - Process manager for Node.js (`ecosystem.config.js` provided)
+2. **Docker** - Containerized deployment (`Dockerfile` provided)
+3. **Cloud Platforms** - Heroku, Railway, etc.
+
+See `DEPLOYMENT.md` for detailed instructions.
+
+## 🧪 Testing Recommendations
+
+1. **Spam Detection**:
+   - Send message with URL
+   - Verify deletion and DM notification
+   - Check Firestore `moderationLogs`
+
+2. **Custom Patterns**:
+   - Add pattern via `/add-spam-pattern`
+   - Send matching message
+   - Verify detection
+
+3. **Trends**:
+   - Send several messages
+   - Run `/trends 1`
+   - Verify keyword extraction and aggregation
+
+4. **Daily Report**:
+   - Run `/force-daily-report`
+   - Verify DM received with proper formatting
+
+5. **Opt-Out**:
+   - Run `/toggle-spam-deletion`
+   - Send spam message
+   - Verify it's logged but NOT deleted
+
+## 📝 Environment Configuration
+
+Required environment variables:
+```env
+DISCORD_TOKEN=<bot_token>
+DISCORD_CLIENT_ID=<client_id>
+FIREBASE_PROJECT_ID=<project_id>
+FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
+SPAM_DETECTION_ENABLED=true
+DAILY_REPORT_CRON=0 9 * * *
+DAILY_REPORT_TIMEZONE=UTC
 ```
 
-✅ **Stubbed Logic**
-- Basic quota checking implemented
-- Ready for integration with subscription tiers
-- Placeholder for future Whop integration
-
-### 6. Message Processor (`src/services/messageProcessor.ts`)
-
-✅ **Queue Management**
-- Concurrency limit: 5
-- Promise-based with p-queue
-- Queue stats available
-
-✅ **Processing Pipeline**
-- `enqueueMessage()`: Add to queue
-- `processInboundMessage()`: Process message (private)
-- `generateResponse()`: Generate reply (placeholder)
-
-✅ **Error Handling**
-- Try-catch in processing
-- Fallback error messages to users
-- Logging for all failures
-
-### 7. Firebase Integration (`src/services/firebase.ts`)
-
-✅ **Initialization**
-- Service account authentication
-- Environment variable configuration
-- Singleton pattern (initialize once)
-
-✅ **Configuration**
-- Project ID, Client Email, Private Key from env
-- Proper newline handling in private key
-- Error handling with clear messages
-
-### 8. TypeScript Configuration
-
-✅ **Strict Mode Enabled**
-- Type safety enforced
-- ESModuleInterop for compatibility
-- Source maps for debugging
-
-✅ **Build Configuration**
-- Target: ES2022
-- Module: CommonJS
-- Output: `dist/` directory
-- Declaration files generated
-
-### 9. Command Deployment Script (`src/scripts/deployCommands.ts`)
-
-✅ **Features**
-- Reads commands from `commands.ts`
-- Deploys to guild or globally based on env
-- Clear success messages with command list
-- Error handling with exit codes
-
-✅ **Usage**
-```bash
-npm run discord:deploy
-```
-
-### 10. Documentation
-
-✅ **README Updates**
-- Complete Discord bot setup instructions
-- Firebase configuration guide
-- Troubleshooting section
-- Testing checklist
-- Environment variable documentation
-- Tech stack updated to reflect implementation
-
-✅ **New Documents Created**
-- `ARCHITECTURE.md`: System architecture and diagrams
-- `CONTRIBUTING.md`: Development guidelines
-- `docs/bot-setup.md`: Detailed bot setup guide
-- `IMPLEMENTATION_SUMMARY.md`: This document
-
-✅ **.env.example**
-- All required variables with examples
-- Comments explaining each variable
-- Instructions for Firebase private key format
-
-### 11. Development Tools
-
-✅ **NPM Scripts**
-- `npm run build`: Compile TypeScript
-- `npm run dev`: Development mode with ts-node
-- `npm start`: Production mode (compiled)
-- `npm run discord:deploy`: Deploy slash commands
-- `npm run validate`: Check environment configuration
-
-✅ **Validation Script**
-- Checks all required environment variables
-- Indicates optional variables
-- Masks sensitive values
-- Clear error messages with guidance
-
-## Technical Decisions
-
-### Why discord.js v14?
-- Latest stable version
-- Best TypeScript support
-- Built-in rate limiting
-- Active community
-
-### Why Firebase Firestore?
-- Serverless (no database management)
-- Real-time capabilities (future features)
-- Free tier sufficient for development
-- Easy integration with future web dashboard
-
-### Why p-queue?
-- Simple concurrency control
-- Promise-based (async/await)
-- Lightweight
-- Perfect for rate limiting preparation
-
-### Why Singleton Services?
-- Simple import/export
-- No need for dependency injection yet
-- Easy to mock for future testing
-- Common pattern in Node.js
-
-## Acceptance Criteria Status
-
-✅ **Running bot locally with valid env variables**
-- Bot starts without errors
-- Connects to Discord successfully
-- Logs in with correct credentials
-
-✅ **Joining test guild and executing commands**
-- `/config add-channel` successfully stores channel ID in Firestore
-- Commands appear in Discord slash command menu
-- Responses are ephemeral (private)
-
-✅ **Message processing pipeline**
-- Messages in configured channels trigger processing
-- Placeholder reply sent successfully
-- Other channels ignored gracefully
-- Quota respected
-
-✅ **Slash command registration script**
-- `npm run discord:deploy` works without errors
-- Commands appear instantly with guild deployment
-- Global deployment option available
-
-✅ **Logging and error handling**
-- Clear logs indicate when messages are skipped
-- Reasons logged (config, quota, filters)
-- No unhandled promise rejections
-- Graceful error recovery
-
-## File Structure
-
-```
-discord-qa-bot/
-├── src/
-│   ├── bot/
-│   │   ├── index.ts              ✅ Main bot runtime
-│   │   ├── commands.ts           ✅ Slash command definitions
-│   │   └── commandHandler.ts    ✅ Command interaction handlers
-│   ├── services/
-│   │   ├── firebase.ts           ✅ Firebase initialization
-│   │   ├── configService.ts      ✅ Guild configuration (Firestore)
-│   │   ├── usageService.ts       ✅ Quota tracking (stubbed)
-│   │   └── messageProcessor.ts   ✅ Message queue and processing
-│   ├── types/
-│   │   └── index.ts              ✅ TypeScript type definitions
-│   └── scripts/
-│       ├── deployCommands.ts     ✅ Command deployment
-│       └── validate.ts           ✅ Environment validation
-├── docs/
-│   └── bot-setup.md              ✅ Setup guide
-├── dist/                         ✅ Compiled output (gitignored)
-├── .env.example                  ✅ Environment template
-├── .gitignore                    ✅ Already present
-├── package.json                  ✅ Dependencies and scripts
-├── tsconfig.json                 ✅ TypeScript config
-├── ARCHITECTURE.md               ✅ Architecture docs
-├── CONTRIBUTING.md               ✅ Contributing guidelines
-├── IMPLEMENTATION_SUMMARY.md     ✅ This document
-└── README.md                     ✅ Updated with setup
-
-Total TypeScript Files: 9
-Total Lines of Code: ~800+
-Total Documentation: 1000+ lines
-```
-
-## Environment Variables Required
-
-| Variable | Purpose | Example |
-|----------|---------|---------|
-| `DISCORD_TOKEN` | Bot authentication | `MTk4NjIyNDgzNDcxOTI1MjQ4.YnljRA...` |
-| `DISCORD_CLIENT_ID` | Application ID | `1234567890123456789` |
-| `DISCORD_GUILD_ID` | Test server (optional) | `9876543210987654321` |
-| `FIREBASE_PROJECT_ID` | Firebase project | `my-discord-bot-12345` |
-| `FIREBASE_CLIENT_EMAIL` | Service account | `firebase-adminsdk@...` |
-| `FIREBASE_PRIVATE_KEY` | Service account key | `-----BEGIN PRIVATE KEY-----\n...` |
-| `NODE_ENV` | Environment | `development` or `production` |
-
-## Testing Checklist
-
-✅ Bot starts without errors
-✅ Bot connects to Discord
-✅ Bot shows as online in server
-✅ `/config list-channels` returns empty list initially
-✅ `/config add-channel #test` adds channel successfully
-✅ `/config list-channels` shows added channel
-✅ Message in configured channel triggers bot
-✅ Bot sends placeholder response
-✅ Message in non-configured channel is ignored
-✅ Bot messages are ignored (no loops)
-✅ DMs are ignored
-✅ Mention-only messages ignored
-✅ Quota tracking works (visible in Firestore)
-✅ Commands require proper permissions
-✅ Error messages are user-friendly
-✅ Logs are clear and informative
-
-## Next Steps (Future Tickets)
-
-### Immediate Priority
-1. **Knowledge Base Integration**
-   - Gemini API integration
-   - Document upload processing
-   - Vector embeddings storage
-   - Semantic search implementation
-
-2. **Web Dashboard**
-   - React frontend
-   - Firebase authentication
-   - Document management UI
-   - Analytics visualization
-
-3. **Advanced Commands**
-   - `/ask`: Direct question-answering
-   - `/stats`: View usage statistics
-   - `/help`: Command reference
-
-### Medium Priority
-4. **Subscription Integration**
-   - Whop API integration
-   - Tier-based quota limits
-   - Payment verification
-
-5. **Analytics System**
-   - Question tracking
-   - Response accuracy metrics
-   - Usage patterns
-   - Export capabilities
-
-6. **Moderation Features**
-   - Rate limiting per user
-   - Spam detection
-   - Content filtering
-
-### Long-term
-7. **Multi-language Support**
-8. **Voice Channel Integration**
-9. **Custom Branding (Enterprise)**
-10. **Self-hosted Option**
-
-## Known Limitations
-
-1. **Placeholder Responses**: Knowledge engine not yet implemented
-2. **Stubbed Quota Logic**: Uses default limit, not subscription-based
-3. **No Web Dashboard**: Configuration only via Discord commands
-4. **No Analytics**: Basic usage tracking only
-5. **No User Rate Limiting**: Only guild-level quota
-6. **No Caching**: All data fetched from Firestore each time
-
-## Performance Characteristics
-
-- **Startup Time**: <5 seconds
-- **Command Response**: <1 second (Firestore latency)
-- **Message Processing**: <2 seconds (placeholder response)
-- **Memory Usage**: ~50-100 MB (idle)
-- **Concurrent Messages**: 5 (configurable)
-
-## Security Measures
-
-✅ Environment variables for secrets
-✅ .gitignore includes .env
-✅ Firebase service account authentication
-✅ Permission checks on commands
-✅ Ephemeral command responses
-✅ Input validation on slash commands
-✅ Error messages don't expose internals
-
-## Deployment Ready
-
-✅ **Local Development**: Fully functional
-✅ **Heroku**: Ready (add env vars)
-✅ **Railway**: Ready (add env vars)
-✅ **Docker**: Dockerfile needed (future)
-✅ **CI/CD**: GitHub Actions needed (future)
-
-## Maintenance
-
-### Updating Commands
-1. Edit `src/bot/commands.ts`
-2. Run `npm run discord:deploy`
-3. Test in Discord
-
-### Adding New Features
-1. Create service in `src/services/`
-2. Import and use in bot handlers
-3. Update types if needed
-4. Document in README
-
-### Monitoring
-- Check console logs for errors
-- Monitor Firestore for data issues
-- Track Discord API rate limits
-- Watch memory usage in production
-
-## Summary
-
-The Discord core implementation is **complete and production-ready** for basic operation. The bot successfully:
-
-- Connects to Discord with proper intents
-- Registers and responds to slash commands
-- Processes messages with filtering and quota checks
-- Persists configuration to Firestore
-- Provides comprehensive logging
-- Handles errors gracefully
-- Includes complete documentation
-
-The foundation is solid and ready for knowledge base integration in the next development phase.
-
----
-
-**Implementation Date**: October 27, 2024  
-**Status**: ✅ Complete  
-**Next Phase**: Knowledge Base Integration
+## 🔄 Future Enhancements
+
+Potential improvements:
+- ML-based spam detection
+- User-reported spam handling
+- Satisfaction score collection (reactions/thumbs up)
+- Dashboard web interface
+- Export trends to CSV/PDF
+- Multi-language support
+- Automated false-positive learning
+- Appeal system for spam deletions
+
+## 📦 Dependencies
+
+Core dependencies:
+- `discord.js@14.14.1` - Discord bot library
+- `firebase-admin@12.0.0` - Firestore database
+- `node-cron@3.0.3` - Job scheduling
+- `dotenv@16.3.1` - Environment configuration
+
+Dev dependencies:
+- TypeScript 5.3.3
+- ESLint & Prettier for code quality
+
+## 🐛 Known Limitations
+
+1. **Keyword Extraction**: Basic word filtering, not NLP-based
+2. **Satisfaction Score**: Currently stubbed, requires implementation
+3. **Question Detection**: Simple pattern matching, could be improved
+4. **Rate Limiting**: Basic 1-second delay, could be more sophisticated
+5. **False Positives**: May flag legitimate URLs, needs tuning
+
+## 📊 Performance Considerations
+
+- Firestore queries use indexes for efficiency
+- Cron job processes guilds sequentially to avoid rate limits
+- Message processing is async and non-blocking
+- Error handling prevents cascade failures
+
+## ✨ Code Quality
+
+- ✅ TypeScript strict mode enabled
+- ✅ ESLint passing (no errors)
+- ✅ Consistent code style with Prettier
+- ✅ Proper error handling throughout
+- ✅ Comprehensive inline documentation
+- ✅ Follows Discord.js best practices

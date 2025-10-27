@@ -1,97 +1,69 @@
-import * as dotenv from 'dotenv';
-import express, { Express } from 'express';
-import { discordService } from './services/discordService';
-import routes from './routes';
+import { Client, GatewayIntentBits, Events, REST, Routes } from 'discord.js';
+import { config } from './config';
+import { messageHandler } from './handlers/messageHandler';
+import { AdminCommands } from './commands/adminCommands';
+import DailyReportJob from './jobs/dailyReportJob';
 
-dotenv.config();
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+  ],
+});
 
-const PORT = process.env.PORT || 3000;
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const dailyReportJob = new DailyReportJob(client);
+const adminCommands = new AdminCommands(client, dailyReportJob);
 
-const args = process.argv.slice(2);
-const runWorker = args.includes('--worker');
-const runWeb = args.includes('--web');
-const runBoth = !runWorker && !runWeb;
+client.once(Events.ClientReady, async (readyClient) => {
+  console.log(`Logged in as ${readyClient.user.tag}`);
 
-async function startWebServer(): Promise<void> {
-  const app: Express = express();
+  try {
+    await registerCommands();
+    console.log('Slash commands registered successfully');
+  } catch (error) {
+    console.error('Error registering commands:', error);
+  }
 
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  dailyReportJob.start();
+  console.log('Daily report job started');
+});
 
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    
-    if (req.method === 'OPTIONS') {
-      res.sendStatus(200);
-      return;
-    }
-    
-    next();
-  });
+client.on(Events.MessageCreate, async (message) => {
+  await messageHandler.handleMessage(message);
+});
 
-  app.use('/api', routes);
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+  await adminCommands.handleCommand(interaction);
+});
 
-  app.get('/', (req, res) => {
-    res.json({
-      name: 'Discord Q&A Bot API',
-      version: '1.0.0',
-      status: 'running',
-      bot: discordService.isReady() ? 'ready' : 'not ready',
-    });
-  });
+client.on(Events.Error, (error) => {
+  console.error('Discord client error:', error);
+});
 
-  app.listen(PORT, () => {
-    console.log(`🌐 Web server listening on port ${PORT}`);
+async function registerCommands(): Promise<void> {
+  const commands = adminCommands.getCommands().map((command) => command.toJSON());
+
+  const rest = new REST({ version: '10' }).setToken(config.discord.token);
+
+  await rest.put(Routes.applicationCommands(config.discord.clientId), {
+    body: commands,
   });
 }
 
-async function startWorker(): Promise<void> {
-  if (!DISCORD_TOKEN) {
-    console.error('DISCORD_TOKEN is required to start the bot');
-    process.exit(1);
-  }
-
-  console.log('🤖 Starting Discord bot...');
-  await discordService.start(DISCORD_TOKEN);
-
-  setInterval(async () => {
-    console.log('📊 Sending daily insights...');
-    await discordService.sendDailyInsights();
-  }, 24 * 60 * 60 * 1000);
-
-  console.log('✅ Discord bot started successfully');
+async function shutdown(): Promise<void> {
+  console.log('Shutting down...');
+  dailyReportJob.stop();
+  await client.destroy();
+  process.exit(0);
 }
 
-async function main(): Promise<void> {
-  console.log('🚀 Starting Discord Q&A Bot');
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
-  if (runBoth || runWeb) {
-    await startWebServer();
-  }
-
-  if (runBoth || runWorker) {
-    await startWorker();
-  }
-
-  if (!runBoth && !runWeb && !runWorker) {
-    console.log('No mode specified. Use --web, --worker, or run without flags for both.');
-  }
-}
-
-main().catch((error) => {
-  console.error('Fatal error:', error);
+client.login(config.discord.token).catch((error) => {
+  console.error('Failed to login:', error);
   process.exit(1);
-});
-
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully');
-  process.exit(0);
 });

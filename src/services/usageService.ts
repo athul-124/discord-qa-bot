@@ -1,132 +1,89 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import { firestoreService } from './firestoreService';
+import { UsageMetrics } from '../types';
 
-export interface UsageStats {
-  serverId: string;
-  messageCount: number;
-  lastReset: number;
-  limitReached: boolean;
-  history: Array<{
-    timestamp: number;
-    count: number;
-  }>;
-}
-
-export class UsageService {
-  private usagePath: string;
-  private usage: Map<string, UsageStats>;
-  private messageLimit: number;
-
-  constructor() {
-    this.usagePath = path.join(process.cwd(), 'data', 'usage.json');
-    this.usage = new Map();
-    this.messageLimit = parseInt(process.env.FREE_TIER_MESSAGE_LIMIT || '100', 10);
-    this.loadUsage();
+class UsageService {
+  private getPeriodKey(date: Date = new Date()): string {
+    return date.toISOString().split('T')[0];
   }
 
-  private ensureDataDir(): void {
-    const dataDir = path.dirname(this.usagePath);
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-  }
-
-  private loadUsage(): void {
-    this.ensureDataDir();
+  async incrementSpamCount(guildId: string): Promise<void> {
+    const period = this.getPeriodKey();
     
-    try {
-      if (fs.existsSync(this.usagePath)) {
-        const data = fs.readFileSync(this.usagePath, 'utf8');
-        const usage = JSON.parse(data);
-        this.usage = new Map(Object.entries(usage));
-        console.log(`Loaded usage data for ${this.usage.size} servers`);
-      }
-    } catch (error) {
-      console.error('Error loading usage:', error);
-      this.usage = new Map();
-    }
-  }
-
-  private saveUsage(): void {
-    try {
-      this.ensureDataDir();
-      const data = JSON.stringify(Object.fromEntries(this.usage), null, 2);
-      fs.writeFileSync(this.usagePath, data, 'utf8');
-    } catch (error) {
-      console.error('Error saving usage:', error);
-    }
-  }
-
-  getUsage(serverId: string): UsageStats {
-    const now = Date.now();
-    const monthStart = new Date(now);
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-
-    let stats = this.usage.get(serverId);
-
-    if (!stats || stats.lastReset < monthStart.getTime()) {
-      stats = {
-        serverId,
-        messageCount: 0,
-        lastReset: monthStart.getTime(),
-        limitReached: false,
-        history: stats?.history || [],
-      };
-      this.usage.set(serverId, stats);
-      this.saveUsage();
-    }
-
-    return stats;
-  }
-
-  incrementUsage(serverId: string): UsageStats {
-    const stats = this.getUsage(serverId);
-    stats.messageCount++;
-
-    if (stats.messageCount >= this.messageLimit) {
-      stats.limitReached = true;
-    }
-
-    stats.history.push({
-      timestamp: Date.now(),
-      count: stats.messageCount,
+    await firestoreService.updateUsageMetrics({
+      guildId,
+      totalMessages: 1,
+      spamMessages: 1,
+      legitimateMessages: 0,
+      questionsAnswered: 0,
+      unansweredQueries: 0,
+      period,
+      timestamp: new Date(),
     });
+  }
 
-    if (stats.history.length > 1000) {
-      stats.history = stats.history.slice(-1000);
+  async incrementLegitimateCount(guildId: string, wasAnswered: boolean = false): Promise<void> {
+    const period = this.getPeriodKey();
+    
+    await firestoreService.updateUsageMetrics({
+      guildId,
+      totalMessages: 1,
+      spamMessages: 0,
+      legitimateMessages: 1,
+      questionsAnswered: wasAnswered ? 1 : 0,
+      unansweredQueries: wasAnswered ? 0 : 1,
+      period,
+      timestamp: new Date(),
+    });
+  }
+
+  async getUsageMetrics(
+    guildId: string,
+    date: Date = new Date()
+  ): Promise<UsageMetrics | null> {
+    const period = this.getPeriodKey(date);
+    return await firestoreService.getUsageMetrics(guildId, period);
+  }
+
+  async getUsageMetricsForRange(
+    guildId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<UsageMetrics[]> {
+    const metrics: UsageMetrics[] = [];
+    const currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      const periodMetrics = await this.getUsageMetrics(guildId, currentDate);
+      if (periodMetrics) {
+        metrics.push(periodMetrics);
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    this.usage.set(serverId, stats);
-    this.saveUsage();
-
-    return stats;
+    return metrics;
   }
 
-  hasReachedLimit(serverId: string): boolean {
-    const stats = this.getUsage(serverId);
-    return stats.messageCount >= this.messageLimit;
-  }
-
-  getRemainingMessages(serverId: string): number {
-    const stats = this.getUsage(serverId);
-    return Math.max(0, this.messageLimit - stats.messageCount);
-  }
-
-  resetUsage(serverId: string): void {
-    const stats: UsageStats = {
-      serverId,
-      messageCount: 0,
-      lastReset: Date.now(),
-      limitReached: false,
-      history: [],
-    };
-    this.usage.set(serverId, stats);
-    this.saveUsage();
-  }
-
-  getAllUsage(): UsageStats[] {
-    return Array.from(this.usage.values());
+  aggregateMetrics(metrics: UsageMetrics[]): UsageMetrics {
+    return metrics.reduce(
+      (acc, metric) => ({
+        ...acc,
+        totalMessages: acc.totalMessages + metric.totalMessages,
+        spamMessages: acc.spamMessages + metric.spamMessages,
+        legitimateMessages: acc.legitimateMessages + metric.legitimateMessages,
+        questionsAnswered: acc.questionsAnswered + metric.questionsAnswered,
+        unansweredQueries: acc.unansweredQueries + metric.unansweredQueries,
+      }),
+      {
+        guildId: metrics[0]?.guildId || '',
+        totalMessages: 0,
+        spamMessages: 0,
+        legitimateMessages: 0,
+        questionsAnswered: 0,
+        unansweredQueries: 0,
+        period: 'aggregated',
+        timestamp: new Date(),
+      }
+    );
   }
 }
 

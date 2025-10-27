@@ -1,25 +1,26 @@
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 export const config = {
   discord: {
     token: process.env.DISCORD_TOKEN || '',
     clientId: process.env.DISCORD_CLIENT_ID || '',
-    ownerId: process.env.OWNER_DISCORD_ID || '',
-    guildId: process.env.DISCORD_GUILD_ID,
   },
   firebase: {
     projectId: process.env.FIREBASE_PROJECT_ID || '',
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') || '',
-    serviceAccount: process.env.FIREBASE_SERVICE_ACCOUNT || '',
+    serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || './serviceAccountKey.json',
   },
-  gemini: {
-    apiKey: process.env.GEMINI_API_KEY || '',
-  },
-  whop: {
-    appId: process.env.WHOP_APP_ID || '',
-    apiKey: process.env.WHOP_API_KEY || '',
-  },
-  server: {
-    port: parseInt(process.env.PORT || '3000', 10),
-    nodeEnv: process.env.NODE_ENV || 'development',
+  bot: {
+    spamDetectionEnabled: process.env.SPAM_DETECTION_ENABLED !== 'false',
+    dailyReportCron: process.env.DAILY_REPORT_CRON || '0 9 * * *',
+    dailyReportTimezone: process.env.DAILY_REPORT_TIMEZONE || 'UTC',
   },
 };
+
+export const SPAM_BASE_PATTERN = /https?:\/\/|spam/i;
+export const DEFAULT_SPAM_PATTERNS = [
+  /discord\.gg\/[a-zA-Z0-9]+/i,
+  /free\s+nitro/i,
+  /click\s+here/i,
+];
