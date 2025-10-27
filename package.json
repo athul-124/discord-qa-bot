@@ -1,49 +1,40 @@
 {
   "name": "discord-qa-bot",
   "version": "1.0.0",
-  "description": "Discord Q&A Bot with AI-powered knowledge base",
-  "main": "dist/index.js",
+  "description": "Discord Q&A bot with knowledge base management",
+  "main": "index.js",
   "scripts": {
+    "dev:server": "nodemon --exec ts-node src/server/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
-    "test": "mocha",
-    "test:watch": "mocha --watch",
-    "test:coverage": "nyc mocha",
-    "lint": "eslint src test --ext .ts --ignore-pattern '**/*.d.ts'",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
+    "start": "node dist/server/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [
-    "discord",
-    "bot",
-    "qa",
-    "ai",
-    "gemini"
-  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/athul-124/discord-qa-bot.git"
+  },
+  "keywords": [],
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "@types/chai": "^4.3.11",
-    "@types/mocha": "^10.0.6",
-    "@types/node": "^20.10.6",
-    "@types/pdf-parse": "^1.1.5",
-    "@types/sinon": "^17.0.2",
-    "@typescript-eslint/eslint-plugin": "^6.17.0",
-    "@typescript-eslint/parser": "^6.17.0",
-    "chai": "^4.3.10",
-    "eslint": "^8.56.0",
-    "mocha": "^10.2.0",
-    "nyc": "^15.1.0",
-    "prettier": "^3.1.1",
-    "sinon": "^17.0.1",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/athul-124/discord-qa-bot/issues"
   },
+  "homepage": "https://github.com/athul-124/discord-qa-bot#readme",
   "dependencies": {
-    "@google-cloud/firestore": "^7.1.0",
-    "@google/generative-ai": "^0.24.1",
-    "discord.js": "^14.14.1",
-    "dotenv": "^16.3.1",
-    "pdf-parse": "^1.1.1"
+    "csv-parser": "^3.2.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.5.0",
+    "multer": "^2.0.2",
+    "pdf-parse": "^2.4.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.4",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.9.1",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
