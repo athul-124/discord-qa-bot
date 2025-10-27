@@ -22,9 +22,57 @@ service cloud.firestore {
       }
     }
 
-    // Knowledge base documents
+    match /guildConfigs/{guildId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Knowledge base documents (kbs collection)
+    match /kbs/{kbId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /knowledge_base/{document=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
     match /knowledge/{document=**} {
       allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /ingestions/{document=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Usage tracking
+    match /usage/{userId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /usageMetrics/{document=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Trend logs (trends collection)
+    match /trends/{trendId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /trendLogs/{document=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Moderation logs
+    match /moderationLogs/{document=**} {
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 

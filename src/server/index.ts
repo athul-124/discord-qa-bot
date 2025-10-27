@@ -1,10 +1,11 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { initializeFirebase } from '../services/firebaseService';
-import { authMiddleware } from '../middleware/auth';
+import { authenticateRequest } from '../middleware/auth';
 import { errorHandler } from '../middleware/errorHandler';
 import { handleKbUpload } from './uploadHandler';
 
@@ -12,6 +13,23 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5000', 'http://localhost:5173'];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.some((allowed) => origin.startsWith(allowed))) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  })
+);
 
 const uploadDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -42,7 +60,7 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-app.post('/upload-kb', authMiddleware, upload.single('file'), handleKbUpload);
+app.post('/upload-kb', authenticateRequest, upload.single('file'), handleKbUpload);
 
 app.use(errorHandler);
 

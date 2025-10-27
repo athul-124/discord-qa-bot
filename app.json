@@ -28,6 +28,10 @@
       "description": "Discord application client ID",
       "required": true
     },
+    "GEMINI_API_KEY": {
+      "description": "Google Gemini AI API key",
+      "required": true
+    },
     "WHOP_API_KEY": {
       "description": "Whop API key for subscription verification",
       "required": true
@@ -37,15 +41,23 @@
       "required": false
     },
     "FIREBASE_PROJECT_ID": {
-      "description": "Firebase project ID for authentication",
-      "required": false
+      "description": "Firebase project ID",
+      "required": true
     },
     "FIREBASE_CLIENT_EMAIL": {
       "description": "Firebase service account client email",
-      "required": false
+      "required": true
     },
     "FIREBASE_PRIVATE_KEY": {
-      "description": "Firebase service account private key (with \\n for newlines)",
+      "description": "Firebase service account private key (escape newlines: replace \\n with \\\\n)",
+      "required": true
+    },
+    "FIREBASE_STORAGE_BUCKET": {
+      "description": "Firebase storage bucket (usually project-id.appspot.com)",
+      "required": false
+    },
+    "SERVICE_ACCOUNT_JSON": {
+      "description": "Alternative: Full Firebase service account JSON (escape newlines: replace \\n with \\\\n)",
       "required": false
     },
     "FREE_TIER_MESSAGE_LIMIT": {
@@ -56,6 +68,10 @@
     "NODE_ENV": {
       "description": "Node environment",
       "value": "production",
+      "required": false
+    },
+    "ALLOWED_ORIGINS": {
+      "description": "Comma-separated list of allowed CORS origins (Firebase Hosting URLs)",
       "required": false
     }
   },
