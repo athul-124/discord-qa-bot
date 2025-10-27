@@ -13,6 +13,14 @@ build/
 .env.production
 .env.test
 
+# Firebase credentials
+serviceAccountKey.json
+firebase-adminsdk-*.json
+.firebaserc.local
+
+# Upload directory
+uploads/
+
 # IDE
 .vscode/
 .idea/
