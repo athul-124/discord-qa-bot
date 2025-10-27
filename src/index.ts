@@ -1,74 +1,97 @@
-import { Client, GatewayIntentBits } from 'discord.js';
-import { Firestore } from '@google-cloud/firestore';
 import * as dotenv from 'dotenv';
-import { FirestoreKnowledgeSearchService } from './services/firestoreKnowledgeSearch';
-import { GeminiService } from './services/geminiService';
-import { UsageService } from './services/usageService';
-import { ConfigService } from './services/configService';
-import { MessageHandler } from './handlers/messageHandler';
+import express, { Express } from 'express';
+import { discordService } from './services/discordService';
+import routes from './routes';
 
 dotenv.config();
 
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
-const OWNER_USER_ID = process.env.OWNER_USER_ID;
+const PORT = process.env.PORT || 3000;
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
-if (!DISCORD_BOT_TOKEN) {
-  throw new Error('DISCORD_BOT_TOKEN is required');
+const args = process.argv.slice(2);
+const runWorker = args.includes('--worker');
+const runWeb = args.includes('--web');
+const runBoth = !runWorker && !runWeb;
+
+async function startWebServer(): Promise<void> {
+  const app: Express = express();
+
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(200);
+      return;
+    }
+    
+    next();
+  });
+
+  app.use('/api', routes);
+
+  app.get('/', (req, res) => {
+    res.json({
+      name: 'Discord Q&A Bot API',
+      version: '1.0.0',
+      status: 'running',
+      bot: discordService.isReady() ? 'ready' : 'not ready',
+    });
+  });
+
+  app.listen(PORT, () => {
+    console.log(`🌐 Web server listening on port ${PORT}`);
+  });
 }
 
-if (!GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is required');
-}
-
-const db = new Firestore({
-  projectId: FIREBASE_PROJECT_ID
-});
-
-const knowledgeSearch = new FirestoreKnowledgeSearchService(db);
-const geminiService = new GeminiService(GEMINI_API_KEY, db, OWNER_USER_ID);
-const usageService = new UsageService(db);
-const configService = new ConfigService(db);
-const messageHandler = new MessageHandler(
-  knowledgeSearch,
-  geminiService,
-  usageService,
-  configService,
-  OWNER_USER_ID
-);
-
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  ],
-});
-
-client.once('ready', () => {
-  console.log(`Logged in as ${client.user?.tag}!`);
-  console.log('Discord QA Bot is ready to answer questions!');
-  
-  setInterval(async () => {
-    await geminiService.processQueue();
-  }, 60000);
-});
-
-client.on('messageCreate', async (message) => {
-  try {
-    await messageHandler.handleMessage(message);
-  } catch (error) {
-    console.error('Error handling message:', error);
+async function startWorker(): Promise<void> {
+  if (!DISCORD_TOKEN) {
+    console.error('DISCORD_TOKEN is required to start the bot');
+    process.exit(1);
   }
+
+  console.log('🤖 Starting Discord bot...');
+  await discordService.start(DISCORD_TOKEN);
+
+  setInterval(async () => {
+    console.log('📊 Sending daily insights...');
+    await discordService.sendDailyInsights();
+  }, 24 * 60 * 60 * 1000);
+
+  console.log('✅ Discord bot started successfully');
+}
+
+async function main(): Promise<void> {
+  console.log('🚀 Starting Discord Q&A Bot');
+
+  if (runBoth || runWeb) {
+    await startWebServer();
+  }
+
+  if (runBoth || runWorker) {
+    await startWorker();
+  }
+
+  if (!runBoth && !runWeb && !runWorker) {
+    console.log('No mode specified. Use --web, --worker, or run without flags for both.');
+  }
+}
+
+main().catch((error) => {
+  console.error('Fatal error:', error);
+  process.exit(1);
 });
 
-client.on('error', (error) => {
-  console.error('Discord client error:', error);
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  process.exit(0);
 });
 
-process.on('unhandledRejection', (error) => {
-  console.error('Unhandled promise rejection:', error);
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  process.exit(0);
 });
-
-client.login(DISCORD_BOT_TOKEN);

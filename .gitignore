@@ -1,32 +1,9 @@
-# Dependencies
 node_modules/
-
-# Build output
 dist/
-
-# Environment variables
 .env
-
-# Temporary files
-uploads/
-*.tmp
-
-# Logs
-logs/
 *.log
-npm-debug.log*
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
 .DS_Store
-Thumbs.db
-
-# Firebase
-serviceAccountKey.json
-firebase-debug.log
-firestore-debug.log
+data/
+*.db
+*.sqlite
+firebase-adminsdk.json

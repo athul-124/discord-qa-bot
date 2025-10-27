@@ -1,183 +1,319 @@
-# discord-qa-bot
+# Discord Q&A Bot
 
-A Discord Q&A bot with knowledge base management capabilities.
+A Discord bot with Whop subscription gating that provides Q&A functionality based on custom knowledge bases. Features freemium pricing with free and pro tiers.
 
 ## Features
 
-- Upload knowledge base files (CSV or PDF)
-- Parse and normalize Q&A pairs
-- Store entries in Firestore with keyword indexing
-- Archive original files in Firebase Storage
-- Track ingestion metadata for auditing
+- 🤖 **Discord Bot Integration** - Responds to messages in configured channels
+- 💰 **Whop Subscription Gating** - Free and Pro tier support
+- 📚 **Knowledge Base** - Custom knowledge base per server
+- 📊 **Usage Tracking** - Monitor message usage and limits
+- 🔒 **Secure API** - Firebase Auth and Whop token authentication
+- ☁️ **Heroku Ready** - Easy deployment with Procfile and app.json
+
+## Pricing Tiers
+
+### Free Tier
+- 100 messages per month
+- Basic Q&A functionality
+- Knowledge base support
+
+### Pro Tier
+- Unlimited messages
+- Daily trend insights via DM
+- Priority support
 
 ## Setup
 
 ### Prerequisites
 
-- Node.js 18+ and npm
-- Firebase project (or use local emulators)
+- Node.js 18+ and npm 9+
+- Discord Bot Token ([Discord Developer Portal](https://discord.com/developers/applications))
+- Whop API Key ([Whop Dashboard](https://whop.com/dashboard))
+- (Optional) Firebase project for authentication
 
-### Installation
+### Local Development
 
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd discord-qa-bot
+```
+
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-### Configuration
-
-1. Copy the example environment file:
+3. Copy `.env.example` to `.env` and configure:
 ```bash
 cp .env.example .env
 ```
 
-2. Update `.env` with your Firebase configuration:
+4. Edit `.env` with your credentials:
 ```env
+DISCORD_TOKEN=your_discord_bot_token
+DISCORD_CLIENT_ID=your_discord_client_id
+WHOP_API_KEY=your_whop_api_key
+WHOP_PRODUCT_ID=your_whop_product_id
+FIREBASE_PROJECT_ID=your_firebase_project_id
+FIREBASE_CLIENT_EMAIL=your_firebase_client_email
+FIREBASE_PRIVATE_KEY=your_firebase_private_key
 PORT=3000
-NODE_ENV=development
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+FREE_TIER_MESSAGE_LIMIT=100
 ```
 
-For production with service account:
-```env
-FIREBASE_SERVICE_ACCOUNT_PATH=/path/to/serviceAccountKey.json
-```
-
-For local development with emulators:
-```env
-FIRESTORE_EMULATOR_HOST=localhost:8080
-FIREBASE_STORAGE_EMULATOR_HOST=localhost:9199
-```
-
-## Usage
-
-### Development
-
-Start the server in development mode with hot reload:
-
-```bash
-npm run dev:server
-```
-
-The server will start on http://localhost:3000
-
-### Production
-
-Build and run:
-
+5. Build the project:
 ```bash
 npm run build
+```
+
+6. Start the application:
+```bash
+# Run both web server and bot
 npm start
+
+# Or run separately:
+npm run web    # API server only
+npm run worker # Discord bot only
 ```
 
-## API
+## Heroku Deployment
 
-See [API Documentation](docs/api.md) for detailed endpoint information.
+### Quick Deploy
 
-### Quick Start
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
-Upload a knowledge base file:
+### Manual Deployment
 
+1. Create a new Heroku app:
 ```bash
-curl -X POST http://localhost:3000/upload-kb \
-  -H "x-server-id: 123456789012345678" \
-  -H "x-api-token: your-api-token-here" \
-  -F "file=@sample-kb.csv"
+heroku create your-app-name
 ```
 
-Check server health:
-
+2. Set environment variables:
 ```bash
-curl http://localhost:3000/health
+heroku config:set DISCORD_TOKEN=your_token
+heroku config:set DISCORD_CLIENT_ID=your_client_id
+heroku config:set WHOP_API_KEY=your_api_key
+heroku config:set WHOP_PRODUCT_ID=your_product_id
+# Add other variables as needed
 ```
 
-## File Formats
-
-### CSV Format
-
-CSV files must have `question` and `answer` columns:
-
-```csv
-question,answer
-"How do I reset my password?","Click the 'Forgot Password' link."
-"What are your hours?","We are open 9 AM to 5 PM EST."
-```
-
-### PDF Format
-
-PDF files should contain Q&A pairs with markers:
-
-```
-Q: How do I reset my password?
-A: Click the 'Forgot Password' link.
-
-Q: What are your hours?
-A: We are open 9 AM to 5 PM EST.
-```
-
-## Project Structure
-
-```
-discord-qa-bot/
-├── src/
-│   ├── server/
-│   │   ├── index.ts          # Express server setup
-│   │   └── uploadHandler.ts  # Upload endpoint handler
-│   ├── services/
-│   │   ├── firebaseService.ts      # Firebase initialization
-│   │   └── knowledgeBaseService.ts # Firestore operations
-│   ├── middleware/
-│   │   ├── auth.ts           # Authentication middleware
-│   │   └── errorHandler.ts   # Error handling middleware
-│   ├── utils/
-│   │   ├── csvProcessor.ts   # CSV parsing logic
-│   │   ├── pdfProcessor.ts   # PDF parsing logic
-│   │   ├── textProcessing.ts # Text normalization & keywords
-│   │   └── storageUtils.ts   # Firebase Storage operations
-│   └── types/
-│       └── index.ts          # TypeScript types
-├── docs/
-│   └── api.md               # API documentation
-├── uploads/                 # Temporary upload directory
-├── .env                     # Environment variables
-├── .env.example            # Example environment file
-├── tsconfig.json           # TypeScript configuration
-├── nodemon.json            # Nodemon configuration
-└── package.json            # Project dependencies
-```
-
-## Development Notes
-
-### Authentication
-
-The current authentication is a placeholder that checks for `x-server-id` and `x-api-token` headers. This will be replaced with Whop/Firebase Auth in a future update.
-
-### File Processing
-
-- Maximum file size: 20MB
-- Supported formats: CSV, PDF
-- Files are temporarily stored during processing and deleted afterward
-- Original files are archived in Firebase Storage
-
-### Keyword Extraction
-
-The system automatically extracts keywords from Q&A pairs for search indexing:
-- Converts to lowercase
-- Removes punctuation and stop words
-- Applies basic stemming
-- Stores unique keywords for each entry
-
-## Testing
-
-To test the upload functionality, use the provided sample file:
-
+3. Deploy:
 ```bash
-curl -X POST http://localhost:3000/upload-kb \
-  -H "x-server-id: test-server-123" \
-  -H "x-api-token: test-token" \
-  -F "file=@sample-kb.csv"
+git push heroku main
 ```
+
+4. Scale dynos:
+```bash
+heroku ps:scale web=1 worker=1
+```
+
+5. View logs:
+```bash
+heroku logs --tail
+```
+
+### Heroku Configuration
+
+The app uses two dyno types:
+- **web**: Express API server (PORT is automatically set by Heroku)
+- **worker**: Discord bot process
+
+Both can run on Heroku Free tier, but note that free dynos sleep after 30 minutes of inactivity.
+
+## API Endpoints
+
+### Health Check
+```
+GET /api/health
+```
+Returns bot status and health information.
+
+### Link Server to Whop Subscription
+```
+POST /api/link-server
+Authorization: Bearer <whop_token_or_firebase_token>
+Content-Type: application/json
+
+{
+  "whopToken": "user_whop_token",
+  "serverId": "discord_server_id"
+}
+```
+Links a Discord server to a Whop subscription. Validates the token and updates server tier.
+
+### Upload Knowledge Base
+```
+POST /api/upload-kb
+Authorization: Bearer <whop_token_or_firebase_token>
+Content-Type: application/json
+
+{
+  "serverId": "discord_server_id",
+  "knowledgeBase": "Your knowledge base content..."
+}
+```
+Updates the knowledge base for a server. Requires authentication.
+
+### Get Usage Statistics
+```
+GET /api/usage/:serverId
+Authorization: Bearer <whop_token_or_firebase_token>
+```
+Returns message usage statistics for a server.
+
+Response:
+```json
+{
+  "serverId": "123456789",
+  "tier": "free",
+  "usage": {
+    "messageCount": 45,
+    "limitReached": false,
+    "lastReset": 1234567890000,
+    "remaining": 55
+  }
+}
+```
+
+### Get Subscription Status
+```
+GET /api/subscription/:serverId
+Authorization: Bearer <whop_token_or_firebase_token>
+```
+Returns subscription information for a server.
+
+### Get Server Configuration
+```
+GET /api/config/:serverId
+Authorization: Bearer <whop_token_or_firebase_token>
+```
+Returns server configuration and settings.
+
+### Update Server Configuration
+```
+POST /api/config
+Authorization: Bearer <whop_token_or_firebase_token>
+Content-Type: application/json
+
+{
+  "serverId": "discord_server_id",
+  "settings": {
+    "enabled": true,
+    "channelIds": ["channel_id_1", "channel_id_2"]
+  }
+}
+```
+Updates server settings like enabled channels.
+
+## Authentication
+
+The API supports two authentication methods:
+
+1. **Firebase Auth**: Use Firebase ID tokens
+2. **Whop Tokens**: Use Whop user access tokens
+
+Include tokens in the Authorization header:
+```
+Authorization: Bearer <your_token>
+```
+
+## Bot Usage
+
+1. **Add the bot to your Discord server** using the OAuth2 URL from Discord Developer Portal
+2. **Link your subscription** via the dashboard or API
+3. **Configure channels** where the bot should respond
+4. **Upload a knowledge base** for better Q&A responses
+5. **Ask questions** in configured channels
+
+### Free Tier Limits
+
+When a free tier server reaches 100 messages/month:
+- Bot stops processing new messages
+- Owner receives a DM notification
+- Upgrade prompt is displayed
+
+### Pro Tier Benefits
+
+Pro tier servers receive:
+- Unlimited message processing
+- Daily insight reports via DM to server owner
+- No usage restrictions
+
+## Firebase Hosting Integration
+
+For dashboard hosting:
+
+1. Build your dashboard frontend
+2. Configure Firebase Hosting:
+```bash
+firebase init hosting
+```
+
+3. Deploy:
+```bash
+firebase deploy --only hosting
+```
+
+4. Set API endpoint in your dashboard to your Heroku app URL
+
+## Data Storage
+
+The bot stores data locally in JSON files:
+- `data/configs.json` - Server configurations
+- `data/usage.json` - Usage statistics
+
+For production, consider migrating to a database like PostgreSQL or MongoDB.
+
+## Development
+
+### Project Structure
+```
+src/
+├── index.ts              # Main entry point
+├── services/
+│   ├── whopService.ts    # Whop API client
+│   ├── configService.ts  # Server config management
+│   ├── usageService.ts   # Usage tracking
+│   └── discordService.ts # Discord bot logic
+├── middleware/
+│   └── auth.ts           # Authentication middleware
+└── routes/
+    └── index.ts          # API routes
+```
+
+### Scripts
+
+- `npm run dev` - Development mode with ts-node
+- `npm run build` - Build TypeScript to JavaScript
+- `npm start` - Run production build
+- `npm run web` - Run web server only
+- `npm run worker` - Run Discord bot only
+
+## Troubleshooting
+
+### Bot not responding
+- Check Discord token is valid
+- Verify bot has Message Content Intent enabled in Discord Developer Portal
+- Check bot has permissions in the server
+- Verify channels are configured in settings
+
+### Authentication errors
+- Ensure Firebase credentials are properly formatted
+- Check Whop API key is valid
+- Verify tokens are not expired
+
+### Heroku deployment issues
+- Ensure all required environment variables are set
+- Check build logs: `heroku logs --tail`
+- Verify Node.js version in engines field matches Heroku
 
 ## License
 
 ISC
+
+## Support
+
+For issues or questions, please open an issue on GitHub or contact support.

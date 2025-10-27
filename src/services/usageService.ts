@@ -1,150 +1,133 @@
-import { Firestore, FieldValue } from '@google-cloud/firestore';
+import * as fs from 'fs';
+import * as path from 'path';
 
-export interface UsageData {
-  userId: string;
+export interface UsageStats {
+  serverId: string;
   messageCount: number;
-  monthlyLimit: number;
-  resetDate: Date;
-  tier: 'free' | 'pro';
+  lastReset: number;
+  limitReached: boolean;
+  history: Array<{
+    timestamp: number;
+    count: number;
+  }>;
 }
 
 export class UsageService {
-  private db: Firestore;
-  private collectionName: string;
+  private usagePath: string;
+  private usage: Map<string, UsageStats>;
+  private messageLimit: number;
 
-  constructor(db: Firestore, collectionName: string = 'usage') {
-    this.db = db;
-    this.collectionName = collectionName;
+  constructor() {
+    this.usagePath = path.join(process.cwd(), 'data', 'usage.json');
+    this.usage = new Map();
+    this.messageLimit = parseInt(process.env.FREE_TIER_MESSAGE_LIMIT || '100', 10);
+    this.loadUsage();
   }
 
-  /**
-   * Get usage data for a user
-   * @param userId User ID
-   * @returns Usage data or null if not found
-   */
-  async getUsage(userId: string): Promise<UsageData | null> {
-    const docRef = this.db.collection(this.collectionName).doc(userId);
-    const doc = await docRef.get();
-
-    if (!doc.exists) {
-      return null;
+  private ensureDataDir(): void {
+    const dataDir = path.dirname(this.usagePath);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
     }
-
-    const data = doc.data()!;
-    return {
-      userId,
-      messageCount: data.messageCount || 0,
-      monthlyLimit: data.monthlyLimit || 10,
-      resetDate: data.resetDate?.toDate() || new Date(),
-      tier: data.tier || 'free'
-    };
   }
 
-  /**
-   * Initialize usage data for a new user
-   * @param userId User ID
-   * @param tier User tier
-   */
-  async initializeUsage(userId: string, tier: 'free' | 'pro' = 'free'): Promise<void> {
-    const monthlyLimit = tier === 'pro' ? 1000 : 10;
-    const resetDate = this.calculateNextResetDate();
-
-    await this.db.collection(this.collectionName).doc(userId).set({
-      messageCount: 0,
-      monthlyLimit,
-      resetDate,
-      tier
-    });
-  }
-
-  /**
-   * Check if user can send a message
-   * @param userId User ID
-   * @returns True if user is within limits
-   */
-  async canSendMessage(userId: string): Promise<boolean> {
-    let usage = await this.getUsage(userId);
-
-    // Initialize if not exists
-    if (!usage) {
-      await this.initializeUsage(userId);
-      return true;
-    }
-
-    // Check if reset needed
-    if (new Date() >= usage.resetDate) {
-      await this.resetUsage(userId);
-      usage = await this.getUsage(userId);
-      if (!usage) return false;
-    }
-
-    return usage.messageCount < usage.monthlyLimit;
-  }
-
-  /**
-   * Increment message count for a user
-   * @param userId User ID
-   * @returns Updated usage data
-   */
-  async incrementUsage(userId: string): Promise<UsageData | null> {
-    const docRef = this.db.collection(this.collectionName).doc(userId);
+  private loadUsage(): void {
+    this.ensureDataDir();
     
-    await docRef.update({
-      messageCount: FieldValue.increment(1)
-    });
-
-    return this.getUsage(userId);
+    try {
+      if (fs.existsSync(this.usagePath)) {
+        const data = fs.readFileSync(this.usagePath, 'utf8');
+        const usage = JSON.parse(data);
+        this.usage = new Map(Object.entries(usage));
+        console.log(`Loaded usage data for ${this.usage.size} servers`);
+      }
+    } catch (error) {
+      console.error('Error loading usage:', error);
+      this.usage = new Map();
+    }
   }
 
-  /**
-   * Reset usage count for a user
-   * @param userId User ID
-   */
-  async resetUsage(userId: string): Promise<void> {
-    const usage = await this.getUsage(userId);
-    if (!usage) return;
+  private saveUsage(): void {
+    try {
+      this.ensureDataDir();
+      const data = JSON.stringify(Object.fromEntries(this.usage), null, 2);
+      fs.writeFileSync(this.usagePath, data, 'utf8');
+    } catch (error) {
+      console.error('Error saving usage:', error);
+    }
+  }
 
-    const resetDate = this.calculateNextResetDate();
+  getUsage(serverId: string): UsageStats {
+    const now = Date.now();
+    const monthStart = new Date(now);
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
 
-    await this.db.collection(this.collectionName).doc(userId).update({
+    let stats = this.usage.get(serverId);
+
+    if (!stats || stats.lastReset < monthStart.getTime()) {
+      stats = {
+        serverId,
+        messageCount: 0,
+        lastReset: monthStart.getTime(),
+        limitReached: false,
+        history: stats?.history || [],
+      };
+      this.usage.set(serverId, stats);
+      this.saveUsage();
+    }
+
+    return stats;
+  }
+
+  incrementUsage(serverId: string): UsageStats {
+    const stats = this.getUsage(serverId);
+    stats.messageCount++;
+
+    if (stats.messageCount >= this.messageLimit) {
+      stats.limitReached = true;
+    }
+
+    stats.history.push({
+      timestamp: Date.now(),
+      count: stats.messageCount,
+    });
+
+    if (stats.history.length > 1000) {
+      stats.history = stats.history.slice(-1000);
+    }
+
+    this.usage.set(serverId, stats);
+    this.saveUsage();
+
+    return stats;
+  }
+
+  hasReachedLimit(serverId: string): boolean {
+    const stats = this.getUsage(serverId);
+    return stats.messageCount >= this.messageLimit;
+  }
+
+  getRemainingMessages(serverId: string): number {
+    const stats = this.getUsage(serverId);
+    return Math.max(0, this.messageLimit - stats.messageCount);
+  }
+
+  resetUsage(serverId: string): void {
+    const stats: UsageStats = {
+      serverId,
       messageCount: 0,
-      resetDate
-    });
+      lastReset: Date.now(),
+      limitReached: false,
+      history: [],
+    };
+    this.usage.set(serverId, stats);
+    this.saveUsage();
   }
 
-  /**
-   * Update user tier
-   * @param userId User ID
-   * @param tier New tier
-   */
-  async updateTier(userId: string, tier: 'free' | 'pro'): Promise<void> {
-    const monthlyLimit = tier === 'pro' ? 1000 : 10;
-
-    await this.db.collection(this.collectionName).doc(userId).update({
-      tier,
-      monthlyLimit
-    });
-  }
-
-  /**
-   * Calculate next reset date (first day of next month)
-   * @returns Next reset date
-   */
-  private calculateNextResetDate(): Date {
-    const now = new Date();
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    return nextMonth;
-  }
-
-  /**
-   * Get remaining messages for a user
-   * @param userId User ID
-   * @returns Number of remaining messages
-   */
-  async getRemainingMessages(userId: string): Promise<number> {
-    const usage = await this.getUsage(userId);
-    if (!usage) return 0;
-
-    return Math.max(0, usage.monthlyLimit - usage.messageCount);
+  getAllUsage(): UsageStats[] {
+    return Array.from(this.usage.values());
   }
 }
+
+export const usageService = new UsageService();

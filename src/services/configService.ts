@@ -1,92 +1,149 @@
-import { Firestore } from '@google-cloud/firestore';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface ServerConfig {
-  guildId: string;
-  aiEnabled: boolean;
-  enabledChannels: string[];
-  confidenceThreshold: number;
-  notifyOnMiss: boolean;
+  serverId: string;
+  ownerId: string;
+  tier: 'free' | 'pro';
+  whopCustomerId?: string;
+  whopToken?: string;
+  expiresAt?: number;
+  linkedAt: number;
+  knowledgeBase?: string;
+  settings?: {
+    enabled: boolean;
+    channelIds?: string[];
+  };
 }
 
 export class ConfigService {
-  private db: Firestore;
-  private collectionName: string;
+  private configPath: string;
+  private configs: Map<string, ServerConfig>;
 
-  constructor(db: Firestore, collectionName: string = 'server_configs') {
-    this.db = db;
-    this.collectionName = collectionName;
+  constructor() {
+    this.configPath = path.join(process.cwd(), 'data', 'configs.json');
+    this.configs = new Map();
+    this.loadConfigs();
   }
 
-  async getConfig(guildId: string): Promise<ServerConfig> {
-    const docRef = this.db.collection(this.collectionName).doc(guildId);
-    const doc = await docRef.get();
-
-    if (!doc.exists) {
-      return this.getDefaultConfig(guildId);
+  private ensureDataDir(): void {
+    const dataDir = path.dirname(this.configPath);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
     }
+  }
 
-    const data = doc.data()!;
-    return {
-      guildId,
-      aiEnabled: data.aiEnabled ?? true,
-      enabledChannels: data.enabledChannels || [],
-      confidenceThreshold: data.confidenceThreshold ?? 0.7,
-      notifyOnMiss: data.notifyOnMiss ?? false
+  private loadConfigs(): void {
+    this.ensureDataDir();
+    
+    try {
+      if (fs.existsSync(this.configPath)) {
+        const data = fs.readFileSync(this.configPath, 'utf8');
+        const configs = JSON.parse(data);
+        this.configs = new Map(Object.entries(configs));
+        console.log(`Loaded ${this.configs.size} server configurations`);
+      }
+    } catch (error) {
+      console.error('Error loading configs:', error);
+      this.configs = new Map();
+    }
+  }
+
+  private saveConfigs(): void {
+    try {
+      this.ensureDataDir();
+      const data = JSON.stringify(Object.fromEntries(this.configs), null, 2);
+      fs.writeFileSync(this.configPath, data, 'utf8');
+    } catch (error) {
+      console.error('Error saving configs:', error);
+    }
+  }
+
+  getConfig(serverId: string): ServerConfig | null {
+    return this.configs.get(serverId) || null;
+  }
+
+  getAllConfigs(): ServerConfig[] {
+    return Array.from(this.configs.values());
+  }
+
+  setConfig(serverId: string, config: Partial<ServerConfig>): ServerConfig {
+    const existing = this.configs.get(serverId);
+    
+    const updated: ServerConfig = {
+      serverId,
+      ownerId: config.ownerId || existing?.ownerId || '',
+      tier: config.tier || existing?.tier || 'free',
+      whopCustomerId: config.whopCustomerId || existing?.whopCustomerId,
+      whopToken: config.whopToken || existing?.whopToken,
+      expiresAt: config.expiresAt || existing?.expiresAt,
+      linkedAt: existing?.linkedAt || Date.now(),
+      knowledgeBase: config.knowledgeBase || existing?.knowledgeBase,
+      settings: {
+        enabled: config.settings?.enabled ?? existing?.settings?.enabled ?? true,
+        channelIds: config.settings?.channelIds || existing?.settings?.channelIds || [],
+      },
     };
+
+    this.configs.set(serverId, updated);
+    this.saveConfigs();
+    return updated;
   }
 
-  async setAiEnabled(guildId: string, enabled: boolean): Promise<void> {
-    const docRef = this.db.collection(this.collectionName).doc(guildId);
-    await docRef.set({ aiEnabled: enabled }, { merge: true });
+  linkServer(
+    serverId: string,
+    ownerId: string,
+    tier: 'free' | 'pro',
+    whopCustomerId?: string,
+    whopToken?: string,
+    expiresAt?: number
+  ): ServerConfig {
+    return this.setConfig(serverId, {
+      serverId,
+      ownerId,
+      tier,
+      whopCustomerId,
+      whopToken,
+      expiresAt,
+    });
   }
 
-  async addEnabledChannel(guildId: string, channelId: string): Promise<void> {
-    const config = await this.getConfig(guildId);
-    
-    if (!config.enabledChannels.includes(channelId)) {
-      config.enabledChannels.push(channelId);
-      await this.db.collection(this.collectionName).doc(guildId).set({
-        enabledChannels: config.enabledChannels
-      }, { merge: true });
+  deleteConfig(serverId: string): boolean {
+    const deleted = this.configs.delete(serverId);
+    if (deleted) {
+      this.saveConfigs();
     }
+    return deleted;
   }
 
-  async removeEnabledChannel(guildId: string, channelId: string): Promise<void> {
-    const config = await this.getConfig(guildId);
+  getTier(serverId: string): 'free' | 'pro' {
+    const config = this.configs.get(serverId);
     
-    const updatedChannels = config.enabledChannels.filter(id => id !== channelId);
-    await this.db.collection(this.collectionName).doc(guildId).set({
-      enabledChannels: updatedChannels
-    }, { merge: true });
-  }
-
-  async setConfidenceThreshold(guildId: string, threshold: number): Promise<void> {
-    const docRef = this.db.collection(this.collectionName).doc(guildId);
-    await docRef.set({ confidenceThreshold: threshold }, { merge: true });
-  }
-
-  async setNotifyOnMiss(guildId: string, notify: boolean): Promise<void> {
-    const docRef = this.db.collection(this.collectionName).doc(guildId);
-    await docRef.set({ notifyOnMiss: notify }, { merge: true });
-  }
-
-  private getDefaultConfig(guildId: string): ServerConfig {
-    return {
-      guildId,
-      aiEnabled: true,
-      enabledChannels: [],
-      confidenceThreshold: 0.7,
-      notifyOnMiss: false
-    };
-  }
-
-  async isChannelEnabled(guildId: string, channelId: string): Promise<boolean> {
-    const config = await this.getConfig(guildId);
-    
-    if (config.enabledChannels.length === 0) {
-      return true;
+    if (!config) {
+      return 'free';
     }
-    
-    return config.enabledChannels.includes(channelId);
+
+    if (config.tier === 'pro' && config.expiresAt) {
+      if (Date.now() > config.expiresAt) {
+        this.setConfig(serverId, { tier: 'free' });
+        return 'free';
+      }
+    }
+
+    return config.tier;
+  }
+
+  isProTier(serverId: string): boolean {
+    return this.getTier(serverId) === 'pro';
+  }
+
+  updateKnowledgeBase(serverId: string, knowledgeBase: string): void {
+    this.setConfig(serverId, { knowledgeBase });
+  }
+
+  getKnowledgeBase(serverId: string): string | undefined {
+    return this.configs.get(serverId)?.knowledgeBase;
   }
 }
+
+export const configService = new ConfigService();
