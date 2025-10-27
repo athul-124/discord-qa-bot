@@ -478,58 +478,47 @@ The bot will respond with a placeholder message until the knowledge engine is im
 #### Running Tests
 
 ```bash
+# Test Firebase layer connectivity
+npm run test:firebase
+
+# Run full test suite (when implemented)
 npm test
 ```
 
-#### Deployment to Heroku
+#### Firebase Layer Overview
 
-This bot can be deployed to Heroku or any Node.js hosting service:
+The bot uses Firebase for data persistence with the following services:
 
-1. **Prerequisites**:
-   - Install [Heroku CLI](https://devcenter.heroku.com/articles/heroku-cli)
-   - Create a Heroku account
+**Collections:**
+- `server_configs` - Server configuration and subscription tiers
+- `knowledge_entries` - Question-answer knowledge base
+- `usage_entries` - Usage tracking and rate limiting
+- `trend_entries` - Analytics and trend data
 
-2. **Create Heroku App**:
-   ```bash
-   heroku create your-discord-bot-name
-   ```
+**Services:**
+- `configService` - Server configuration management
+- `knowledgeBaseService` - Knowledge base CRUD operations
+- `usageService` - Usage tracking and tier limits (100/mo free, 1000/mo premium, 10000/mo enterprise)
+- `trendService` - Analytics and trending keywords
 
-3. **Set Environment Variables**:
-   ```bash
-   heroku config:set DISCORD_TOKEN=your_token
-   heroku config:set DISCORD_CLIENT_ID=your_client_id
-   heroku config:set FIREBASE_PROJECT_ID=your_project_id
-   heroku config:set FIREBASE_CLIENT_EMAIL=your_email
-   heroku config:set FIREBASE_PRIVATE_KEY="your_private_key"
-   heroku config:set GEMINI_API_KEY=your_gemini_key
-   heroku config:set WHOP_APP_ID=your_whop_app_id
-   heroku config:set WHOP_API_KEY=your_whop_api_key
-   heroku config:set NODE_ENV=production
-   ```
+For detailed information about the data model, schemas, and security rules, see [docs/data-model.md](docs/data-model.md).
 
-4. **Deploy**:
-   ```bash
-   git push heroku main
-   ```
+**Testing Firebase Locally:**
 
-5. **Scale Worker**:
-   ```bash
-   heroku ps:scale worker=1
-   ```
-
-#### Using Firebase Emulators (Optional)
-
-For local development without connecting to production Firebase:
+Use Firebase Emulators for local development:
 
 ```bash
+# Install Firebase CLI
+npm install -g firebase-tools
+
 # Start emulators
-npm run firebase:emulators
+firebase emulators:start
 
-# In another terminal, run the bot
-npm run dev
+# In another terminal, set environment variables and run
+export USE_FIREBASE_EMULATOR=true
+export FIRESTORE_EMULATOR_HOST=localhost:8080
+npm run test:firebase
 ```
-
-The emulators provide a local UI at `http://localhost:4000` for viewing Firestore data and Storage.
 
 ---
 

@@ -8,13 +8,11 @@
     "dev": "tsx watch src/bot/index.ts",
     "dev:server": "tsx watch src/server/index.ts",
     "start": "node dist/bot/index.js",
-    "start:server": "node dist/server/index.js",
-    "discord:deploy": "tsx src/scripts/deployCommands.ts",
-    "validate": "tsx src/scripts/validate.ts",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "test": "mocha -r ts-node/register 'src/**/*.test.ts'",
-    "firebase:emulators": "firebase emulators:start"
+    "discord:deploy": "ts-node src/scripts/deployCommands.ts",
+    "validate": "ts-node src/scripts/validate.ts",
+    "validate:firebase": "ts-node src/scripts/validateFirebase.ts",
+    "test:firebase": "ts-node src/scripts/testFirebase.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "discord",
