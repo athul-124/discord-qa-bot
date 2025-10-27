@@ -148,6 +148,14 @@ async function startBot(): Promise<void> {
       throw new Error('DISCORD_TOKEN is not set in environment variables');
     }
 
+    if (token === 'stub_token') {
+      console.warn('[Bot] Stub token detected - running in stub mode');
+      console.log('[Bot] In stub mode, the bot will not connect to Discord');
+      console.log('[Bot] Replace DISCORD_TOKEN in .env with a real token to enable Discord connection');
+      console.log('[Bot] Stub mode ready - development environment initialized successfully');
+      return;
+    }
+
     console.log('[Bot] Initializing Firebase...');
     initializeFirebase();
 
