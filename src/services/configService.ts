@@ -2,8 +2,11 @@ import { getFirestore } from './firebase';
 import { GuildConfig } from '../types';
 
 export class ConfigService {
-  private db = getFirestore();
   private collection = 'guild_configs';
+
+  private get db() {
+    return getFirestore();
+  }
 
   async getGuildConfig(guildId: string): Promise<GuildConfig | null> {
     try {

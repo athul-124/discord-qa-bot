@@ -2,7 +2,7 @@ import * as admin from 'firebase-admin';
 
 let firebaseInitialized = false;
 
-export function initializeFirebase(): admin.app.App {
+export function initializeFirebase(): admin.app.App | null {
   if (firebaseInitialized) {
     return admin.app();
   }
@@ -13,7 +13,15 @@ export function initializeFirebase(): admin.app.App {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
     if (!projectId || !clientEmail || !privateKey) {
-      throw new Error('Missing Firebase configuration in environment variables');
+      console.warn('[Firebase] Missing configuration in environment variables - running in stub mode');
+      firebaseInitialized = true;
+      return null;
+    }
+
+    if (privateKey.includes('stub_key_placeholder')) {
+      console.warn('[Firebase] Stub credentials detected - running in stub mode');
+      firebaseInitialized = true;
+      return null;
     }
 
     admin.initializeApp({
@@ -29,6 +37,11 @@ export function initializeFirebase(): admin.app.App {
     return admin.app();
   } catch (error) {
     console.error('[Firebase] Initialization error:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[Firebase] Continuing in stub mode for development');
+      firebaseInitialized = true;
+      return null;
+    }
     throw error;
   }
 }

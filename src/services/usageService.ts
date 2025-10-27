@@ -2,8 +2,11 @@ import { getFirestore } from './firebase';
 import { UsageRecord } from '../types';
 
 export class UsageService {
-  private db = getFirestore();
   private collection = 'usage_records';
+
+  private get db() {
+    return getFirestore();
+  }
 
   private getCurrentMonth(): string {
     const now = new Date();
