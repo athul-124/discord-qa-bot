@@ -72,3 +72,23 @@ export interface SpamDetectionResult {
   matchedPattern?: string;
   reason?: string;
 }
+
+export interface KnowledgeEntry {
+  question: string;
+  answer: string;
+  category?: string;
+  keywords?: string[];
+  serverId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface IngestionSummary {
+  totalRows: number;
+  successfulRows: number;
+  failedRows: number;
+  errors: Array<{
+    row: number;
+    error: string;
+  }>;
+}
