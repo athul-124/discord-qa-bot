@@ -2,7 +2,58 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.0] - 2024-10-26
+## [1.0.0] - 2024-10-27
+
+### Added - Whop Subscription Gating & Launch Preparation
+
+#### Whop Subscription Integration
+- **Guild-based subscription checking** with caching (5-minute TTL)
+  - New `checkSub()` method in SubscriptionService for per-guild verification
+  - Automatic subscription validation through Whop API
+  - Cached results to minimize API calls and improve performance
+
+- **Enhanced subscription features**
+  - Free tier: 100 messages/month per server
+  - Pro tier: Unlimited messages (999,999/month technical limit)
+  - Automatic tier expiration handling
+  - Real-time subscription validation
+
+#### New Slash Commands
+- **/upgrade** - Get Pro subscription information
+  - Shows pricing, features, and upgrade benefits
+  - Links to Whop checkout page
+  - Displays dashboard linking instructions
+  - Confirms Pro status for already-upgraded servers
+
+#### User Experience Improvements
+- **Smart upgrade messaging** when free tier limit exceeded
+  - Clear in-channel notifications with upgrade instructions
+  - Automatic DM to server owner with upgrade link
+  - Detailed breakdown of Pro tier benefits
+  - Information about monthly reset dates
+
+- **Enhanced error handling and logging**
+  - Detailed logging for subscription checks
+  - Graceful fallback on API failures
+  - User-friendly error messages
+
+#### Configuration Updates
+- New environment variables:
+  - `WHOP_CHECKOUT_URL` - Direct link to Whop product checkout
+  - `WHOP_PRODUCT_ID` - Product identifier for validation
+  - `DASHBOARD_URL` - Link to dashboard for server linking
+
+#### Technical Improvements
+- **Dependencies added**
+  - `axios` ^1.6.2 - HTTP client for Whop API
+  - `node-cache` ^5.1.2 - In-memory caching layer
+  - `@types/node-cache` - TypeScript definitions
+
+- **Service enhancements**
+  - WhopService: Token validation, membership checking
+  - SubscriptionService: Guild-based checking with caching
+  - UsageService: Updated limits (100 free, unlimited pro)
+  - ConfigService: Enhanced guild configuration management
 
 ### Added - Whop Subscription Gating Implementation
 

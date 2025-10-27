@@ -1,5 +1,6 @@
-import { ChatInputCommandInteraction, ChannelType, PermissionFlagsBits } from 'discord.js';
+import { ChatInputCommandInteraction, ChannelType, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import { configService } from '../services/configService';
+import { subscriptionService } from '../services/subscriptionService';
 
 export async function handleConfigCommand(interaction: ChatInputCommandInteraction): Promise<void> {
   if (!interaction.guildId) {
@@ -136,4 +137,48 @@ async function handleSetOwner(interaction: ChatInputCommandInteraction): Promise
       content: '❌ Failed to set owner contact. Please try again.' 
     });
   }
+}
+
+export async function handleUpgradeCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+  if (!interaction.guildId) {
+    await interaction.reply({ 
+      content: '❌ This command can only be used in a server.', 
+      ephemeral: true 
+    });
+    return;
+  }
+
+  const tier = await subscriptionService.checkSub(interaction.guildId);
+  
+  if (tier === 'pro') {
+    await interaction.reply({
+      content: '✨ **Your server already has Pro tier!**\n\nYou have unlimited message processing and all premium features enabled.',
+      ephemeral: true
+    });
+    return;
+  }
+
+  const whopCheckoutUrl = process.env.WHOP_CHECKOUT_URL || 'https://whop.com/discord-qa-bot-pro/';
+  const dashboardUrl = process.env.DASHBOARD_URL || 'https://discord-qa-bot.example.com/dashboard';
+
+  const embed = new EmbedBuilder()
+    .setColor(0x5865F2)
+    .setTitle('⭐ Upgrade to Pro')
+    .setDescription(
+      'Unlock unlimited message processing and premium features!\n\n' +
+      '**Pro Features:**\n' +
+      '• 🚀 Unlimited message processing\n' +
+      '• 📊 Daily insights and analytics\n' +
+      '• ⚡ Priority support\n' +
+      '• 🎯 Advanced features\n\n' +
+      '**Only $10/month**'
+    )
+    .addFields(
+      { name: '🛒 Subscribe', value: `[Get Pro on Whop](${whopCheckoutUrl})`, inline: false },
+      { name: '🔗 Link Your Subscription', value: `After subscribing, link your server in the [Dashboard](${dashboardUrl})`, inline: false }
+    )
+    .setFooter({ text: 'Questions? Contact the server owner or visit our support server.' })
+    .setTimestamp();
+
+  await interaction.reply({ embeds: [embed], ephemeral: true });
 }

@@ -144,6 +144,70 @@ export class ConfigService {
   getKnowledgeBase(serverId: string): string | undefined {
     return this.configs.get(serverId)?.knowledgeBase;
   }
+
+  async getGuildConfig(guildId: string): Promise<ServerConfig> {
+    let config = this.getConfig(guildId);
+    
+    if (!config) {
+      config = this.setConfig(guildId, {
+        serverId: guildId,
+        ownerId: '',
+        tier: 'free',
+        settings: {
+          enabled: true,
+          channelIds: [],
+        },
+      });
+    }
+    
+    return config;
+  }
+
+  async addAllowedChannel(guildId: string, channelId: string): Promise<void> {
+    const config = await this.getGuildConfig(guildId);
+    const channelIds = config.settings?.channelIds || [];
+    
+    if (!channelIds.includes(channelId)) {
+      channelIds.push(channelId);
+      this.setConfig(guildId, {
+        settings: {
+          ...config.settings,
+          enabled: config.settings?.enabled ?? true,
+          channelIds,
+        },
+      });
+    }
+  }
+
+  async removeAllowedChannel(guildId: string, channelId: string): Promise<void> {
+    const config = await this.getGuildConfig(guildId);
+    const channelIds = (config.settings?.channelIds || []).filter(id => id !== channelId);
+    
+    this.setConfig(guildId, {
+      settings: {
+        ...config.settings,
+        enabled: config.settings?.enabled ?? true,
+        channelIds,
+      },
+    });
+  }
+
+  async listAllowedChannels(guildId: string): Promise<string[]> {
+    const config = await this.getGuildConfig(guildId);
+    return config.settings?.channelIds || [];
+  }
+
+  async setOwnerContact(guildId: string, contact: string): Promise<void> {
+    const config = await this.getGuildConfig(guildId);
+    this.setConfig(guildId, {
+      ownerId: contact,
+    });
+  }
+
+  get allowedChannels(): string[] {
+    const config = Array.from(this.configs.values())[0];
+    return config?.settings?.channelIds || [];
+  }
 }
 
 export const configService = new ConfigService();

@@ -1,3 +1,7 @@
+import NodeCache from 'node-cache';
+import { configService } from './configService';
+import { whopService } from './whopService';
+
 export interface SubscriptionInfo {
   userId: string;
   tier: 'free' | 'pro';
@@ -16,23 +20,63 @@ export interface SubscriptionFeatures {
 export class SubscriptionService {
   private whopApiKey: string;
   private tierFeatures: Map<string, SubscriptionFeatures>;
+  private cache: NodeCache;
 
   constructor(whopApiKey: string) {
     this.whopApiKey = whopApiKey;
+    this.cache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
     this.tierFeatures = new Map([
       ['free', {
-        monthlyMessageLimit: 10,
+        monthlyMessageLimit: 100,
         prioritySupport: false,
         advancedFeatures: false,
         customResponses: false
       }],
       ['pro', {
-        monthlyMessageLimit: 1000,
+        monthlyMessageLimit: 999999,
         prioritySupport: true,
         advancedFeatures: true,
         customResponses: true
       }]
     ]);
+  }
+
+  /**
+   * Check subscription status for a guild
+   * @param guildId Guild/Server ID
+   * @returns Subscription tier ('free' or 'pro')
+   */
+  async checkSub(guildId: string): Promise<'free' | 'pro'> {
+    const cacheKey = `sub_${guildId}`;
+    const cached = this.cache.get<'free' | 'pro'>(cacheKey);
+    
+    if (cached) {
+      return cached;
+    }
+
+    const tier = configService.getTier(guildId);
+    const config = configService.getConfig(guildId);
+
+    if (config?.whopToken && tier === 'pro') {
+      try {
+        const hasActive = await whopService.hasActiveSubscription(config.whopToken);
+        const result = hasActive ? 'pro' : 'free';
+        
+        if (!hasActive) {
+          configService.setConfig(guildId, { tier: 'free' });
+        }
+        
+        this.cache.set(cacheKey, result);
+        return result;
+      } catch (error) {
+        console.error(`[SubscriptionService] Error checking Whop subscription for ${guildId}:`, error);
+        this.cache.set(cacheKey, tier);
+        return tier;
+      }
+    }
+
+    this.cache.set(cacheKey, tier);
+    return tier;
   }
 
   /**
@@ -139,4 +183,14 @@ export class SubscriptionService {
 
     return new Date() > subscription.expiresAt;
   }
+
+  clearCache(guildId?: string): void {
+    if (guildId) {
+      this.cache.del(`sub_${guildId}`);
+    } else {
+      this.cache.flushAll();
+    }
+  }
 }
+
+export const subscriptionService = new SubscriptionService(process.env.WHOP_API_KEY || '');

@@ -43,4 +43,8 @@ export const commands = [
         )
     )
     .toJSON(),
+  new SlashCommandBuilder()
+    .setName('upgrade')
+    .setDescription('Get the link to upgrade your server to Pro tier')
+    .toJSON(),
 ];
