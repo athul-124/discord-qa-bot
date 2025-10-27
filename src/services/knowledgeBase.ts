@@ -1,5 +1,6 @@
 import * as fs from 'fs';
-import pdfParse from 'pdf-parse';
+import * as path from 'path';
+const pdfParse = require('pdf-parse');
 
 export interface KnowledgeBaseEntry {
   question: string;

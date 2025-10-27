@@ -1,382 +1,437 @@
 # Testing Guide
 
-This guide explains how to test the Discord QA Bot web dashboard locally.
+This document provides detailed information about the testing infrastructure for the discord-qa-bot project.
 
-## Prerequisites
+## Test Framework
 
-- Node.js 18+
-- npm
-- Firebase CLI (optional, for emulator testing)
+- **Mocha**: Test runner
+- **Chai**: Assertion library
+- **Sinon**: Mocking and stubbing library
+- **NYC**: Code coverage tool
 
-## Setup for Testing
+## Running Tests
 
-### 1. Install Dependencies
-
-```bash
-cd web
-npm install
-```
-
-### 2. Configure Environment
+### Basic Commands
 
 ```bash
-cp .env.example .env
+# Run all tests
+npm test
+
+# Run tests in watch mode (auto-rerun on changes)
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
 ```
 
-Update `.env` with test configuration (can use Firebase emulator settings).
+### Environment Variables
 
-## Testing with Firebase Emulators
+Tests use the `.env.test` file for test-specific configuration. Key variables:
 
-### Start Firebase Emulators
-
-```bash
-firebase emulators:start
+```env
+NODE_ENV=test
+FIRESTORE_EMULATOR_HOST=localhost:8080
+FIREBASE_PROJECT_ID=test-project
 ```
 
-This will start:
-- Auth Emulator: http://localhost:9099
-- Firestore Emulator: http://localhost:8080
-- Storage Emulator: http://localhost:9199
-- Hosting Emulator: http://localhost:5000
-- Emulator UI: http://localhost:4000
-
-### Start Development Server
-
-In a separate terminal:
-
-```bash
-cd web
-npm run dev
-```
-
-Access the dashboard at http://localhost:3000
-
-## Manual Testing Scenarios
-
-### 1. Authentication Flow
-
-#### Email/Password Login
-1. Navigate to login page
-2. Enter test email: `test@example.com`
-3. Enter test password: `password123`
-4. Click "Sign In"
-5. ✓ Should redirect to dashboard
-
-#### Magic Link Login
-1. Navigate to login page
-2. Check "Use magic link instead"
-3. Enter email address
-4. Click "Send Magic Link"
-5. ✓ Should show success message
-6. Check Firebase Auth Emulator UI for the magic link
-7. Click the link in emulator
-8. ✓ Should complete authentication and redirect
-
-### 2. Dashboard Home
-
-#### View Usage Metrics
-1. Ensure you're logged in
-2. Navigate to dashboard home (/)
-3. Enter a test server ID (e.g., `123456789`)
-4. ✓ Should display:
-   - Monthly Usage count
-   - Remaining Quota
-   - Subscription Tier
-   - Usage progress bar
-
-#### Error Handling
-1. Try fetching usage without server ID
-2. ✓ Should show server ID input form
-3. Try with invalid server ID
-4. ✓ Should show error toast
-
-### 3. Knowledge Base Upload
-
-#### Successful File Upload
-1. Navigate to Upload KB page (/upload)
-2. Enter server ID
-3. Drag and drop a CSV or PDF file (< 10MB)
-4. ✓ File should appear in upload area
-5. Click "Upload Knowledge Base"
-6. ✓ Should show success toast
-7. ✓ File should be cleared from upload area
-
-#### File Validation
-1. Try uploading unsupported file type (e.g., .txt, .jpg)
-2. ✓ Should show error: "Invalid file type"
-3. Try uploading file > 10MB
-4. ✓ Should show error: "File size must be less than 10MB"
-
-#### Drag and Drop
-1. Drag a valid file over the upload area
-2. ✓ Upload area should highlight
-3. Drop the file
-4. ✓ File should be added
-
-#### Remove File
-1. Add a file to upload area
-2. Click the X button
-3. ✓ File should be removed
-
-### 4. Server Linking
-
-#### Successful Link
-1. Navigate to Link Server page (/link-server)
-2. Enter Discord Server ID
-3. Enter Whop Token
-4. Click "Link Server"
-5. ✓ Should show success message
-6. ✓ Should display subscription tier
-7. ✓ Server ID should be saved to localStorage
-
-#### Free Tier
-1. Link server with free tier token
-2. ✓ Should show "Free" tier badge
-3. Navigate to Trends page
-4. ✓ Should show "Pro Feature" message
-
-#### Pro Tier
-1. Link server with pro tier token
-2. ✓ Should show "Pro" tier badge
-3. ✓ Should show Pro features unlocked message
-4. Navigate to Trends page
-5. ✓ Should display trends data
-
-### 5. Trends & Insights (Pro Only)
-
-#### Pro Tier Access
-1. Ensure server is linked with Pro tier
-2. Navigate to Trends page (/trends)
-3. ✓ Should display:
-   - Total Questions metric
-   - Average Response Time metric
-   - Top Topics count
-   - Top Topics list with progress bars
-   - Daily Usage chart
-
-#### Free Tier Access
-1. Link server with free tier (or no link)
-2. Navigate to Trends page
-3. ✓ Should show upgrade prompt
-4. ✓ Should not display trends data
-
-### 6. Navigation
-
-#### Menu Navigation
-1. Click each menu item:
-   - Dashboard
-   - Upload KB
-   - Link Server
-   - Trends
-2. ✓ Each should navigate to correct page
-3. ✓ Active page should be highlighted
-
-#### Sign Out
-1. Click "Sign Out" button
-2. ✓ Should sign out user
-3. ✓ Should redirect to login page
-4. Try accessing protected route
-5. ✓ Should redirect to login page
-
-### 7. Toast Notifications
-
-#### Success Toast
-1. Perform successful action (e.g., upload file)
-2. ✓ Should show green success toast
-3. ✓ Toast should auto-dismiss after 5 seconds
-4. ✓ Can manually dismiss with X button
-
-#### Error Toast
-1. Perform failed action (e.g., invalid file upload)
-2. ✓ Should show red error toast
-
-#### Warning Toast
-1. Try accessing Pro feature without Pro tier
-2. ✓ Should show yellow warning toast
-
-### 8. Loading States
-
-#### Page Loading
-1. Navigate to dashboard with slow network (throttle in DevTools)
-2. ✓ Should show loading spinner
-
-#### Form Loading
-1. Submit a form (e.g., upload file)
-2. ✓ Submit button should show loading spinner
-3. ✓ Submit button should be disabled
-
-### 9. Form Validation
-
-#### Required Fields
-1. Try submitting forms without required fields
-2. ✓ Browser should show validation message
-3. ✓ Form should not submit
-
-#### Email Validation
-1. Try entering invalid email in login
-2. ✓ Should show email validation error
-
-### 10. Responsive Design
-
-#### Mobile View
-1. Open DevTools responsive mode
-2. Test on various screen sizes:
-   - Mobile (375px)
-   - Tablet (768px)
-   - Desktop (1024px+)
-3. ✓ Layout should adapt properly
-4. ✓ Navigation should be accessible
-5. ✓ Forms should be usable
-
-#### Touch Interactions
-1. Test drag-and-drop on touch devices
-2. ✓ Should work with touch events
-
-### 11. Browser Compatibility
-
-Test on:
-- [ ] Chrome/Edge (latest)
-- [ ] Firefox (latest)
-- [ ] Safari (latest)
-- [ ] Mobile browsers
-
-### 12. Persistence
-
-#### LocalStorage
-1. Set server ID in any form
-2. Refresh page
-3. ✓ Server ID should persist
-4. Navigate to different pages
-5. ✓ Server ID should be remembered
-
-#### Session Persistence
-1. Log in
-2. Refresh page
-3. ✓ Should remain logged in
-4. Close tab and reopen
-5. ✓ Should remain logged in (until sign out)
-
-## Backend API Testing
-
-If testing with a mock backend or actual backend:
-
-### Mock API Responses
-
-Create a mock server for testing (optional):
-
-```javascript
-// mock-server.js
-const express = require('express');
-const app = express();
-
-app.get('/usage', (req, res) => {
-  res.json({
-    monthlyCount: 150,
-    remainingQuota: 850,
-    tier: 'free'
-  });
-});
-
-app.post('/link-server', (req, res) => {
-  res.json({
-    success: true,
-    tier: 'pro',
-    message: 'Server linked successfully'
-  });
-});
-
-app.post('/upload-kb', (req, res) => {
-  res.json({
-    success: true,
-    message: 'File uploaded successfully',
-    fileId: 'test-file-id'
-  });
-});
-
-app.get('/trends', (req, res) => {
-  res.json({
-    totalQuestions: 1250,
-    averageResponseTime: 145,
-    topTopics: [
-      { topic: 'Account Issues', count: 45 },
-      { topic: 'Technical Support', count: 38 },
-      { topic: 'Billing', count: 22 }
-    ],
-    dailyUsage: [
-      { date: '2024-10-20', count: 45 },
-      { date: '2024-10-21', count: 52 },
-      { date: '2024-10-22', count: 38 }
-    ]
-  });
-});
-
-app.listen(3001, () => console.log('Mock server on 3001'));
-```
-
-## Automated Testing (Future)
+## Test Organization
 
 ### Unit Tests
-Future implementation with Vitest:
-```bash
-npm run test
+
+Located in `test/services/` and `test/utils/`, these tests verify individual components in isolation:
+
+#### Knowledge Base Parser (`test/services/knowledgeBase.test.ts`)
+
+Tests for CSV and PDF parsing functionality:
+- Valid CSV parsing with all fields
+- Invalid row rejection (missing question/answer)
+- Keyword extraction from text
+- Quoted field handling
+- PDF Q&A format extraction
+
+**Key scenarios:**
+```typescript
+// CSV with invalid rows
+it('should reject rows with missing question', async () => {
+  // Test implementation
+});
+
+// Keyword extraction
+it('should extract keywords when not provided', async () => {
+  // Test implementation
+});
 ```
 
-### E2E Tests
-Future implementation with Playwright or Cypress:
-```bash
-npm run test:e2e
+#### Knowledge Search (`test/services/knowledgeSearch.test.ts`)
+
+Tests for the search and scoring algorithm:
+- Result ordering by relevance score
+- Exact match detection (score = 1.0)
+- Threshold filtering
+- Keyword matching
+- Case-insensitivity
+
+**Key scenarios:**
+```typescript
+// Exact match
+it('should return exact question match with highest score', () => {
+  const results = searchService.search('What is Discord?');
+  expect(results[0].score).to.equal(1.0);
+});
+
+// Threshold behavior
+it('should return only results above threshold', () => {
+  searchService.setThreshold(0.5);
+  const results = searchService.search('query');
+  results.forEach(r => expect(r.score).to.be.at.least(0.5));
+});
 ```
 
-## Performance Testing
+#### Usage Service (`test/services/usageService.test.ts`)
 
-### Lighthouse Audit
-1. Open Chrome DevTools
-2. Go to Lighthouse tab
-3. Run audit
-4. ✓ Performance score should be > 90
-5. ✓ Accessibility score should be > 90
-6. ✓ Best Practices score should be > 90
-7. ✓ SEO score should be > 80
+Tests for usage tracking and limits:
+- Usage data retrieval
+- User initialization (free/pro tiers)
+- Message limit enforcement
+- Automatic monthly reset
+- Remaining message calculation
 
-### Bundle Size Analysis
-```bash
-cd web
-npm run build
+**Key scenarios:**
+```typescript
+// Limit enforcement
+it('should return false when user has reached limit', async () => {
+  // Mock user at limit
+  const canSend = await usageService.canSendMessage('user123');
+  expect(canSend).to.be.false;
+});
+
+// Monthly reset
+it('should reset usage if reset date has passed', async () => {
+  // Test automatic reset logic
+});
 ```
-Check build output for bundle sizes.
 
-## Security Testing
+#### Spam Detection (`test/utils/spamDetection.test.ts`)
 
-### Authentication
-- [ ] Protected routes redirect unauthenticated users
-- [ ] Tokens are properly secured
-- [ ] Sign out clears all auth state
+Tests for spam and malicious content detection:
+- URL detection (http, https, www)
+- Suspicious patterns (Discord invites, bit.ly, etc.)
+- Excessive repetition
+- Excessive capitalization
+- Message length limits
+- Clean message validation
 
-### API Calls
-- [ ] All API calls include authentication token
-- [ ] Sensitive data is not exposed in client
-- [ ] CORS is properly configured
+**Key scenarios:**
+```typescript
+// URL detection
+it('should detect HTTP URLs', () => {
+  const result = detector.check('Check out http://example.com');
+  expect(result.isSpam).to.be.true;
+});
 
-### Input Validation
-- [ ] File upload validates file types
-- [ ] File upload validates file sizes
-- [ ] Form inputs are sanitized
-- [ ] XSS protection is in place
+// Clean messages
+it('should allow clean simple messages', () => {
+  const result = detector.check('Hello, how are you?');
+  expect(result.isSpam).to.be.false;
+});
+```
 
-## Known Issues / Limitations
+#### Subscription Service (`test/services/subscriptionService.test.ts`)
 
-When testing with emulators:
-- Magic link emails are shown in emulator UI, not sent via email
-- Storage operations may be slower than production
-- Some Firebase features may not work identically to production
+Tests for subscription and tier management:
+- Free vs Pro tier differentiation
+- Feature gating logic
+- Message limit by tier
+- Subscription expiration
+- Whop API integration (mocked)
 
-## Reporting Issues
+**Key scenarios:**
+```typescript
+// Tier features
+it('should return free tier features', () => {
+  const features = service.getFeatures('free');
+  expect(features.monthlyMessageLimit).to.equal(10);
+  expect(features.prioritySupport).to.be.false;
+});
 
-When reporting issues, include:
-1. Steps to reproduce
-2. Expected behavior
-3. Actual behavior
-4. Browser and version
-5. Screenshots/videos if applicable
-6. Console errors
-7. Network tab information
+// Pro tier
+it('should return pro tier features', () => {
+  const features = service.getFeatures('pro');
+  expect(features.monthlyMessageLimit).to.equal(1000);
+  expect(features.prioritySupport).to.be.true;
+});
+```
+
+### Integration Tests
+
+Located in `test/integration/`, these tests verify interactions between multiple services:
+
+#### Message Flow (`test/integration/messageFlow.test.ts`)
+
+End-to-end testing of the complete message processing pipeline:
+
+1. **Valid message flow**
+   - Spam check passes
+   - Usage limit check passes
+   - Knowledge search succeeds
+   - Usage incremented
+
+2. **Spam rejection flow**
+   - Spam detected early
+   - Processing stops
+
+3. **Usage limit enforcement**
+   - Free tier limits respected
+   - Pro tier allows more messages
+   - Monthly reset works correctly
+
+4. **Error handling**
+   - Firestore errors handled gracefully
+   - Empty results handled properly
+
+**Example flow test:**
+```typescript
+it('should process a valid user message end-to-end', async () => {
+  const userId = 'user123';
+  const message = 'How do I join a server?';
+
+  // 1. Check spam
+  const spamCheck = spamDetector.check(message);
+  expect(spamCheck.isSpam).to.be.false;
+
+  // 2. Check usage
+  const canSend = await usageService.canSendMessage(userId);
+  expect(canSend).to.be.true;
+
+  // 3. Search knowledge base
+  const result = searchService.getBestMatch(message);
+  expect(result).to.not.be.null;
+
+  // 4. Increment usage
+  await usageService.incrementUsage(userId);
+});
+```
+
+## Mocking Strategy
+
+### Firestore Mocking
+
+All Firestore operations are mocked using Sinon:
+
+```typescript
+const mockDocRef = {
+  get: sinon.stub(),
+  set: sinon.stub().resolves(),
+  update: sinon.stub().resolves()
+};
+
+const mockCollection = {
+  doc: sinon.stub().returns(mockDocRef)
+};
+
+const mockDb = {
+  collection: sinon.stub().returns(mockCollection)
+};
+```
+
+### External API Mocking
+
+External services (Discord, Gemini, Whop) are mocked to avoid network calls:
+
+```typescript
+// Example: Mocking Whop API
+const service = new SubscriptionService('test_whop_key');
+// API calls return test data without actual HTTP requests
+```
+
+### File System Mocking
+
+File operations are stubbed in tests:
+
+```typescript
+const readFileSyncStub = sinon.stub(fs, 'readFileSync');
+readFileSyncStub.returns('mock file content');
+```
+
+## Coverage Requirements
+
+Target coverage: **70%** for all metrics
+- Lines: 70%
+- Functions: 70%
+- Branches: 70%
+- Statements: 70%
+
+View coverage report:
+```bash
+npm run test:coverage
+open coverage/index.html
+```
+
+## Testing with Firebase Emulator
+
+For more realistic integration testing:
+
+1. Install Firebase CLI:
+   ```bash
+   npm install -g firebase-tools
+   ```
+
+2. Initialize Firebase (if not done):
+   ```bash
+   firebase init emulators
+   ```
+
+3. Start emulator:
+   ```bash
+   firebase emulators:start --only firestore
+   ```
+
+4. Run tests with emulator:
+   ```bash
+   cp .env.test .env
+   npm test
+   ```
+
+## Writing New Tests
+
+### Test Template
+
+```typescript
+import { expect } from 'chai';
+import * as sinon from 'sinon';
+
+describe('ComponentName', () => {
+  let component: ComponentType;
+  let mockDependency: any;
+
+  beforeEach(() => {
+    // Setup
+    mockDependency = { /* mock setup */ };
+    component = new ComponentType(mockDependency);
+  });
+
+  afterEach(() => {
+    // Cleanup
+    sinon.restore();
+  });
+
+  describe('methodName', () => {
+    it('should do expected behavior', () => {
+      // Arrange
+      const input = 'test';
+
+      // Act
+      const result = component.methodName(input);
+
+      // Assert
+      expect(result).to.equal('expected');
+    });
+
+    it('should handle edge case', () => {
+      // Test edge cases
+    });
+
+    it('should handle errors', () => {
+      // Test error handling
+    });
+  });
+});
+```
+
+### Best Practices
+
+1. **Isolation**: Each test should be independent
+2. **Clear naming**: Describe what the test verifies
+3. **AAA pattern**: Arrange, Act, Assert
+4. **Mock external dependencies**: No network calls in tests
+5. **Test edge cases**: Empty inputs, null values, limits
+6. **Test error paths**: Not just happy paths
+7. **Use beforeEach/afterEach**: Setup and cleanup
+
+### Common Patterns
+
+#### Testing async functions:
+```typescript
+it('should handle async operations', async () => {
+  const result = await service.asyncMethod();
+  expect(result).to.exist;
+});
+```
+
+#### Testing errors:
+```typescript
+it('should throw error for invalid input', () => {
+  expect(() => service.method('invalid')).to.throw();
+});
+
+it('should handle rejected promises', async () => {
+  try {
+    await service.failingMethod();
+    expect.fail('Should have thrown');
+  } catch (error) {
+    expect(error.message).to.include('expected error');
+  }
+});
+```
+
+#### Testing with stubs:
+```typescript
+it('should call dependency with correct params', () => {
+  const spy = sinon.spy(mockDependency, 'method');
+  service.doSomething();
+  expect(spy.calledOnce).to.be.true;
+  expect(spy.firstCall.args[0]).to.equal('expected');
+});
+```
+
+## Continuous Integration
+
+Tests run automatically via GitHub Actions on:
+- Every push to `main` or `develop`
+- Every pull request
+
+CI configuration: `.github/workflows/test.yml`
+
+The workflow:
+1. Checks out code
+2. Installs dependencies with `npm ci`
+3. Runs tests with `npm test`
+4. Generates coverage report
+5. Uploads coverage as artifact
+
+## Troubleshooting
+
+### Tests failing locally
+
+1. Ensure dependencies are installed: `npm install`
+2. Check Node.js version: `node --version` (should be 18.x or higher)
+3. Clear any cached builds: `rm -rf node_modules dist && npm install`
+4. Check environment variables in `.env.test`
+
+### Stub/Mock not working
+
+```typescript
+// Make sure to restore after each test
+afterEach(() => {
+  sinon.restore();
+});
+
+// Verify stub is called
+expect(stubFunction.called).to.be.true;
+```
+
+### Coverage not meeting threshold
+
+Run coverage to see which lines are missing:
+```bash
+npm run test:coverage
+```
+
+Then add tests for uncovered code paths.
+
+## Additional Resources
+
+- [Mocha Documentation](https://mochajs.org/)
+- [Chai Assertion Styles](https://www.chaijs.com/guide/styles/)
+- [Sinon Stubs and Spies](https://sinonjs.org/releases/latest/stubs/)
+- [NYC Coverage Configuration](https://github.com/istanbuljs/nyc)

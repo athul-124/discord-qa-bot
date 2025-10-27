@@ -92,11 +92,11 @@ export class SubscriptionService {
 
   /**
    * Verify subscription with Whop API
-   * @param _userId User ID
-   * @param _whopMembershipId Whop membership ID
+   * @param userId User ID
+   * @param whopMembershipId Whop membership ID
    * @returns Subscription tier or null if invalid
    */
-  async verifyWhopSubscription(_userId: string, _whopMembershipId: string): Promise<'free' | 'pro' | null> {
+  async verifyWhopSubscription(userId: string, whopMembershipId: string): Promise<'free' | 'pro' | null> {
     // In production, this would make an API call to Whop
     // Mock implementation for testing
     if (!this.whopApiKey || this.whopApiKey === 'test_whop_key') {

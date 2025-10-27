@@ -111,9 +111,9 @@ export class SpamDetector {
 
   /**
    * Allow a specific URL pattern
-   * @param _pattern URL pattern to allow
+   * @param pattern URL pattern to allow
    */
-  allowUrlPattern(_pattern: RegExp): void {
+  allowUrlPattern(pattern: RegExp): void {
     // In a real implementation, this would maintain a whitelist
     // For now, we'll just note it for future enhancement
   }
