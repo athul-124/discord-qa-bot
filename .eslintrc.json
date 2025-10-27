@@ -1,22 +1,21 @@
 {
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "ecmaVersion": 2022,
+    "ecmaVersion": 2020,
     "sourceType": "module",
-    "project": "./tsconfig.json"
+    "project": "./tsconfig.eslint.json"
   },
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended"
   ],
-  "plugins": ["@typescript-eslint"],
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-console": "off"
+  },
   "env": {
     "node": true,
-    "es2022": true
-  },
-  "rules": {
-    "no-unused-vars": "off",
-    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
-    "@typescript-eslint/no-explicit-any": "warn"
+    "mocha": true
   }
 }

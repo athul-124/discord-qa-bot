@@ -1,215 +1,34 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build output
+dist/
+build/
+
 # Environment variables
 .env
 .env.local
 .env.production
-.env.development
 .env.test
-*.env
 
-# Dependencies
-node_modules/
-venv/
-env/
-ENV/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-pip-log.txt
-pip-delete-this-directory.txt
-.installed.cfg
-*.egg
-*.egg-info/
-dist/
-build/
-wheels/
-*.whl
-
-# IDE and Editor files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.DS_Store
-*.sublime-project
-*.sublime-workspace
-.project
-.classpath
-.settings/
-*.iml
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-pids/
-*.pid
-*.seed
-*.pid.lock
-
-# Build outputs
-build/
-dist/
-out/
-*.min.js
-*.min.css
-bundle.js
-*.bundle.js
 
 # Testing
 coverage/
 .nyc_output/
-.pytest_cache/
-.coverage
-htmlcov/
-*.cover
-.hypothesis/
-.tox/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-db.sql
-
-# Cache and temporary files
-.cache/
-.parcel-cache/
-.next/
-.nuxt/
-.vuepress/dist
-.serverless/
-.fusebox/
-.dynamodb/
-.tern-port
-tmp/
-temp/
-*.tmp
-
-# OS files
-Thumbs.db
-Desktop.ini
-.Spotlight-V100
-.Trashes
-
-# Firebase
-.firebase/
-firebase-debug.log
-firestore-debug.log
-
-# Secrets and credentials
-*.pem
-*.key
-*.cert
-credentials.json
-service-account.json
-secrets.yaml
-
-# Documentation build artifacts
-docs/_build/
-docs/.doctrees/
-
-# Screenshots and assets (commented out - you may want to track these)
-# assets/screenshots/*.png
-# assets/videos/*.mp4
-
-# Local configuration
-config.local.js
-config.local.json
-
-# Package manager lock files (uncomment based on your preference)
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
-
-# Python specific
-*.py[cod]
-*$py.class
-.Python
-develop-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.manifest
-*.spec
-*.mo
-*.pot
-instance/
-.webassets-cache
-.scrapy
-docs/_build/
-.pybuilder/
-target/
-.ipynb_checkpoints
-profile_default/
-ipython_config.py
-.python-version
-celerybeat-schedule
-celerybeat.pid
-*.sage.py
-.spyderproject
-.spyproject
-.ropeproject
-/site
-.mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
-.pytype/
-cython_debug/
-
-# Node specific
-lib-cov
-*.seed
 *.log
-*.csv
-*.dat
-*.out
-*.pid
-*.gz
-.grunt
-bower_components
-.lock-wscript
-.npm
-.eslintcache
-.stylelintcache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-.node_repl_history
-*.tgz
-.yarn-integrity
-.pnp.*
 
-# TypeScript
-*.tsbuildinfo
+# OS
+.DS_Store
+Thumbs.db
 
-# Heroku
-.heroku/
-
-# Miscellaneous
-*.bak
-*.swp
-*~.nib
-*.orig
-*.rej
-.vagrant/
-
-# Backup files
-*.backup
-*.bak
-*.gho
-*.ori
-*.orig
+# Temporary files
 *.tmp
+*.temp
