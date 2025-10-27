@@ -1,0 +1,65 @@
+{
+  "name": "Discord Q&A Bot",
+  "description": "Discord Q&A bot with Whop subscription gating and knowledge base support",
+  "repository": "https://github.com/yourusername/discord-qa-bot",
+  "logo": "https://cdn.discordapp.com/embed/avatars/0.png",
+  "keywords": ["discord", "bot", "whop", "subscription", "qa"],
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "free"
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "free"
+    }
+  },
+  "env": {
+    "DISCORD_TOKEN": {
+      "description": "Discord bot token from Discord Developer Portal",
+      "required": true
+    },
+    "DISCORD_CLIENT_ID": {
+      "description": "Discord application client ID",
+      "required": true
+    },
+    "WHOP_API_KEY": {
+      "description": "Whop API key for subscription verification",
+      "required": true
+    },
+    "WHOP_PRODUCT_ID": {
+      "description": "Whop product ID for the Pro Bot plan",
+      "required": false
+    },
+    "FIREBASE_PROJECT_ID": {
+      "description": "Firebase project ID for authentication",
+      "required": false
+    },
+    "FIREBASE_CLIENT_EMAIL": {
+      "description": "Firebase service account client email",
+      "required": false
+    },
+    "FIREBASE_PRIVATE_KEY": {
+      "description": "Firebase service account private key (with \\n for newlines)",
+      "required": false
+    },
+    "FREE_TIER_MESSAGE_LIMIT": {
+      "description": "Number of messages allowed per month for free tier",
+      "value": "100",
+      "required": false
+    },
+    "NODE_ENV": {
+      "description": "Node environment",
+      "value": "production",
+      "required": false
+    }
+  },
+  "scripts": {
+    "postdeploy": "echo 'Deployment complete! Configure your environment variables in Heroku dashboard.'"
+  }
+}
