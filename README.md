@@ -123,15 +123,38 @@ Preparing to launch your own instance? Check out:
 ### Tech Stack
 
 - **Bot Framework**: Discord.js v14 (Node.js/TypeScript)
-- **AI Models**: Google Gemini (planned), OpenAI GPT-4 (alternative)
+- **AI Models**: Google Gemini API
 - **Vector Database**: Pinecone (planned)
 - **Database**: Firebase Firestore
-- **Backend**: TypeScript with Node.js
+- **Backend**: Express.js + TypeScript with Node.js 18+
 - **Queue Management**: p-queue for rate limiting
+- **Document Processing**: pdf-parse, csv-parser, multer for uploads
+- **Logging**: Winston for structured logging
 - **Dashboard**: React with Firebase Hosting (planned)
 - **Bot Hosting**: Heroku, Railway, or any Node.js host
-- **Subscription Management**: Whop (planned)
+- **Subscription Management**: Whop integration
 - **Analytics**: Custom analytics pipeline (planned)
+
+### Project Structure
+
+```
+discord-qa-bot/
+├── src/
+│   ├── bot/           # Discord bot implementation
+│   ├── server/        # Express API server
+│   ├── services/      # Business logic (Firebase, usage, config, message processing)
+│   ├── utils/         # Utility functions (logging, etc.)
+│   ├── config/        # Configuration management
+│   ├── scripts/       # Deployment and validation scripts
+│   └── types/         # TypeScript type definitions
+├── web/               # Firebase-hosted dashboard (future implementation)
+├── docs/              # Documentation
+├── firebase.json      # Firebase configuration
+├── firestore.rules    # Firestore security rules
+├── storage.rules      # Firebase Storage security rules
+├── .env.example       # Environment variables template
+└── package.json       # Project dependencies and scripts
+```
 
 ---
 
@@ -286,16 +309,36 @@ npm install
 
 #### 3. Set Up Firebase
 
-1. Go to the [Firebase Console](https://console.firebase.google.com/)
-2. Create a new project or select an existing one
-3. Enable Firestore Database:
+1. **Install Firebase CLI** (optional, for local emulators):
+   ```bash
+   npm install -g firebase-tools
+   firebase login
+   ```
+
+2. **Create Firebase Project**:
+   - Go to the [Firebase Console](https://console.firebase.google.com/)
+   - Create a new project or select an existing one
+   - Note your Project ID (update in `.firebaserc` if needed)
+
+3. **Enable Firestore Database**:
    - Click "Firestore Database" in the left sidebar
    - Click "Create database"
-   - Start in production mode or test mode (configure security rules later)
-4. Generate a service account:
+   - Start in production mode or test mode (security rules will be deployed from `firestore.rules`)
+
+4. **Enable Firebase Storage** (for document uploads):
+   - Click "Storage" in the left sidebar
+   - Click "Get started"
+   - Use default settings (security rules will be deployed from `storage.rules`)
+
+5. **Generate Service Account**:
    - Go to Project Settings > Service Accounts
    - Click "Generate new private key"
-   - Save the JSON file securely
+   - Save the JSON file securely (needed for environment variables)
+
+6. **Deploy Firebase Rules** (optional):
+   ```bash
+   firebase deploy --only firestore:rules,storage:rules
+   ```
 
 #### 4. Configure Environment Variables
 
@@ -310,6 +353,7 @@ Edit `.env` with your credentials:
 # Discord Bot Configuration
 DISCORD_TOKEN=your_bot_token_from_step_2
 DISCORD_CLIENT_ID=your_application_id_from_step_2
+OWNER_DISCORD_ID=your_discord_user_id
 
 # Optional: For testing, deploy commands to a specific guild (faster)
 # DISCORD_GUILD_ID=your_test_server_id
@@ -319,7 +363,18 @@ FIREBASE_PROJECT_ID=your_firebase_project_id
 FIREBASE_CLIENT_EMAIL=your_firebase_client_email
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 
-# Bot Configuration
+# Alternative: Base64-encoded service account JSON
+# FIREBASE_SERVICE_ACCOUNT=base64_encoded_service_account_json
+
+# Google Gemini AI Configuration
+GEMINI_API_KEY=your_gemini_api_key
+
+# Whop Integration (for subscription management)
+WHOP_APP_ID=your_whop_app_id
+WHOP_API_KEY=your_whop_api_key
+
+# Server Configuration
+PORT=3000
 NODE_ENV=development
 ```
 
@@ -327,6 +382,8 @@ NODE_ENV=development
 - Keep the quotes around the entire key
 - Include the `\n` characters (they will be converted to actual newlines)
 - Or copy directly from the service account JSON file
+
+**For Whop and Gemini**: These are not strictly required for initial development/testing. The bot will run without them, but full functionality requires proper API keys.
 
 #### 5. Deploy Slash Commands
 
