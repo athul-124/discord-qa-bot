@@ -9,6 +9,8 @@
     "start": "node dist/bot/index.js",
     "discord:deploy": "ts-node src/scripts/deployCommands.ts",
     "validate": "ts-node src/scripts/validate.ts",
+    "validate:firebase": "ts-node src/scripts/validateFirebase.ts",
+    "test:firebase": "ts-node src/scripts/testFirebase.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

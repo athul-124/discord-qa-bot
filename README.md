@@ -421,7 +421,46 @@ The bot will respond with a placeholder message until the knowledge engine is im
 #### Running Tests
 
 ```bash
+# Test Firebase layer connectivity
+npm run test:firebase
+
+# Run full test suite (when implemented)
 npm test
+```
+
+#### Firebase Layer Overview
+
+The bot uses Firebase for data persistence with the following services:
+
+**Collections:**
+- `server_configs` - Server configuration and subscription tiers
+- `knowledge_entries` - Question-answer knowledge base
+- `usage_entries` - Usage tracking and rate limiting
+- `trend_entries` - Analytics and trend data
+
+**Services:**
+- `configService` - Server configuration management
+- `knowledgeBaseService` - Knowledge base CRUD operations
+- `usageService` - Usage tracking and tier limits (100/mo free, 1000/mo premium, 10000/mo enterprise)
+- `trendService` - Analytics and trending keywords
+
+For detailed information about the data model, schemas, and security rules, see [docs/data-model.md](docs/data-model.md).
+
+**Testing Firebase Locally:**
+
+Use Firebase Emulators for local development:
+
+```bash
+# Install Firebase CLI
+npm install -g firebase-tools
+
+# Start emulators
+firebase emulators:start
+
+# In another terminal, set environment variables and run
+export USE_FIREBASE_EMULATOR=true
+export FIRESTORE_EMULATOR_HOST=localhost:8080
+npm run test:firebase
 ```
 
 ---

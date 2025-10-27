@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Events, Message, Partials } from 'discord.js
 import dotenv from 'dotenv';
 import { initializeFirebase } from '../services/firebase';
 import { configService } from '../services/configService';
-import { usageService } from '../services/usageService';
+import { usageServiceLegacy } from '../services/usageService';
 import { messageProcessor } from '../services/messageProcessor';
 import { handleConfigCommand } from './commandHandler';
 
@@ -89,7 +89,7 @@ client.on(Events.MessageCreate, async (message: Message) => {
       return;
     }
 
-    const quota = await usageService.checkQuota(message.guildId);
+    const quota = await usageServiceLegacy.checkQuota(message.guildId);
     
     if (!quota.allowed) {
       console.log(`[Bot] Quota exceeded for guild ${message.guildId}: ${quota.current}/${quota.limit}`);
