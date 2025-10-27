@@ -122,15 +122,16 @@ Preparing to launch your own instance? Check out:
 
 ### Tech Stack
 
-- **Bot Framework**: Discord.py
-- **AI Models**: OpenAI GPT-4, text-embedding-ada-002
-- **Vector Database**: Pinecone
-- **Backend API**: FastAPI (Python) or Express.js (Node.js)
-- **Dashboard**: React with Firebase Hosting
-- **Bot Hosting**: Heroku
-- **Subscription Management**: Whop
-- **Analytics**: Custom analytics pipeline
-- **Caching**: Redis
+- **Bot Framework**: Discord.js v14 (Node.js/TypeScript)
+- **AI Models**: Google Gemini (planned), OpenAI GPT-4 (alternative)
+- **Vector Database**: Pinecone (planned)
+- **Database**: Firebase Firestore
+- **Backend**: TypeScript with Node.js
+- **Queue Management**: p-queue for rate limiting
+- **Dashboard**: React with Firebase Hosting (planned)
+- **Bot Hosting**: Heroku, Railway, or any Node.js host
+- **Subscription Management**: Whop (planned)
+- **Analytics**: Custom analytics pipeline (planned)
 
 ---
 
@@ -252,6 +253,15 @@ Please read our [Contributing Guidelines](CONTRIBUTING.md) first.
 
 ### Development Setup
 
+#### Prerequisites
+
+- Node.js 18+ and npm
+- A Discord account and Discord Developer Application
+- Firebase project with Firestore enabled
+- Git
+
+#### 1. Clone and Install
+
 ```bash
 # Clone the repository
 git clone https://github.com/your-repo/discord-qa-bot.git
@@ -259,22 +269,159 @@ cd discord-qa-bot
 
 # Install dependencies
 npm install
-# or
-pip install -r requirements.txt
+```
 
-# Set up environment variables
+#### 2. Create Discord Bot
+
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+2. Click "New Application" and give it a name
+3. Navigate to the "Bot" section in the left sidebar
+4. Click "Add Bot"
+5. Under "Privileged Gateway Intents", enable:
+   - **MESSAGE CONTENT INTENT** (required for reading message content)
+   - Server Members Intent (optional, for future features)
+   - Presence Intent (optional, for future features)
+6. Click "Reset Token" and copy your bot token (keep this secret!)
+7. Copy your Application ID from the "General Information" tab
+
+#### 3. Set Up Firebase
+
+1. Go to the [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project or select an existing one
+3. Enable Firestore Database:
+   - Click "Firestore Database" in the left sidebar
+   - Click "Create database"
+   - Start in production mode or test mode (configure security rules later)
+4. Generate a service account:
+   - Go to Project Settings > Service Accounts
+   - Click "Generate new private key"
+   - Save the JSON file securely
+
+#### 4. Configure Environment Variables
+
+```bash
+# Copy the example environment file
 cp .env.example .env
-# Edit .env with your credentials
+```
 
-# Run development server
+Edit `.env` with your credentials:
+
+```env
+# Discord Bot Configuration
+DISCORD_TOKEN=your_bot_token_from_step_2
+DISCORD_CLIENT_ID=your_application_id_from_step_2
+
+# Optional: For testing, deploy commands to a specific guild (faster)
+# DISCORD_GUILD_ID=your_test_server_id
+
+# Firebase Configuration (from service account JSON)
+FIREBASE_PROJECT_ID=your_firebase_project_id
+FIREBASE_CLIENT_EMAIL=your_firebase_client_email
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# Bot Configuration
+NODE_ENV=development
+```
+
+**Note:** For `FIREBASE_PRIVATE_KEY`, make sure to:
+- Keep the quotes around the entire key
+- Include the `\n` characters (they will be converted to actual newlines)
+- Or copy directly from the service account JSON file
+
+#### 5. Deploy Slash Commands
+
+Before running the bot, register the slash commands with Discord:
+
+```bash
+# Build TypeScript files
+npm run build
+
+# Deploy commands
+npm run discord:deploy
+```
+
+For faster testing, you can deploy to a specific guild by setting `DISCORD_GUILD_ID` in your `.env` file. This makes commands available instantly instead of waiting up to an hour for global deployment.
+
+#### 6. Invite Bot to Your Server
+
+1. Go to the Discord Developer Portal
+2. Select your application
+3. Navigate to "OAuth2" > "URL Generator"
+4. Select scopes:
+   - `bot`
+   - `applications.commands`
+5. Select bot permissions:
+   - Read Messages/View Channels
+   - Send Messages
+   - Send Messages in Threads
+   - Embed Links
+   - Read Message History
+6. Copy the generated URL and open it in your browser
+7. Select your server and authorize the bot
+
+#### 7. Run the Bot
+
+```bash
+# Development mode (with auto-reload)
 npm run dev
-# or
-python main.py
 
-# Run tests
+# Production mode
+npm run build
+npm start
+```
+
+#### 8. Configure Your Server
+
+Once the bot is running and in your server:
+
+1. Use `/config add-channel #channel-name` to add support channels
+2. Use `/config list-channels` to view configured channels
+3. Use `/config set-owner your@email.com` to set owner contact (optional)
+4. Send a message in a configured channel to test the bot
+
+The bot will respond with a placeholder message until the knowledge engine is implemented.
+
+#### Testing the Setup
+
+1. **Verify bot is online:** Check that the bot shows as online in your Discord server
+2. **Test slash command:** Run `/config list-channels` - should work even if no channels are configured
+3. **Add a channel:** Run `/config add-channel #your-channel`
+4. **Send a message:** Send any message in the configured channel
+5. **Check response:** Bot should reply with "Knowledge engine coming soon!" message
+
+#### Troubleshooting
+
+**Bot doesn't come online:**
+- Verify `DISCORD_TOKEN` is correct
+- Check console for error messages
+- Ensure you copied the token correctly (no extra spaces)
+
+**Slash commands don't appear:**
+- Run `npm run discord:deploy` again
+- Wait a few minutes for Discord to update
+- Try setting `DISCORD_GUILD_ID` for instant guild-level deployment
+- Ensure `DISCORD_CLIENT_ID` is your Application ID, not Bot ID
+
+**"Missing Access" or permission errors:**
+- Ensure MESSAGE CONTENT INTENT is enabled in Discord Developer Portal
+- Re-invite the bot with the correct permissions
+- Check that the bot has permission to read/send messages in the channel
+
+**Firebase errors:**
+- Verify all three Firebase environment variables are set
+- Check that Firestore is enabled in your Firebase project
+- Ensure the service account has proper permissions
+
+**Bot doesn't respond to messages:**
+- Verify the channel is added via `/config add-channel`
+- Check console logs for error messages
+- Ensure the message isn't from a bot account
+- Verify the bot has "Read Message History" permission
+
+#### Running Tests
+
+```bash
 npm test
-# or
-pytest
 ```
 
 ---
