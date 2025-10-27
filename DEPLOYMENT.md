@@ -1,375 +1,277 @@
 # Deployment Guide
 
-This guide walks you through deploying the Discord Q&A Bot with moderation analytics.
+This guide explains how to deploy the Discord QA Bot web dashboard to Firebase Hosting.
 
-## Prerequisites Checklist
+## Prerequisites
 
-- [ ] Node.js 18+ installed
-- [ ] Discord Bot created in Discord Developer Portal
-- [ ] Firebase project created
-- [ ] Firebase service account key downloaded
-- [ ] Server or hosting platform ready
+1. **Firebase CLI**: Install globally if not already installed
+   ```bash
+   npm install -g firebase-tools
+   ```
 
-## Step 1: Discord Bot Setup
+2. **Firebase Project**: Create a Firebase project at https://console.firebase.google.com/
 
-### Create Discord Application
+3. **Firebase Services**: Enable the following services in your Firebase project:
+   - Authentication (Email/Password provider)
+   - Firestore Database
+   - Cloud Storage
+   - Hosting
 
-1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
-2. Click "New Application"
-3. Name your application and click "Create"
-4. Navigate to the "Bot" section
-5. Click "Add Bot"
-6. Under "Privileged Gateway Intents", enable:
-   - Message Content Intent
-   - Server Members Intent
-7. Copy the bot token (you'll need this for `.env`)
+## Initial Setup
 
-### Get Application ID
+### 1. Firebase Login
 
-1. Navigate to "OAuth2" → "General"
-2. Copy the "CLIENT ID" (you'll need this for `.env`)
-
-### Bot Permissions
-
-The bot needs these permissions:
-- Manage Messages (8192)
-- View Channels (1024)
-- Send Messages (2048)
-- Embed Links (16384)
-- Read Message History (65536)
-
-Total Permission Integer: **93248**
-
-### Invite Bot to Server
-
-Use this URL (replace YOUR_CLIENT_ID):
-```
-https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=93248&scope=bot%20applications.commands
-```
-
-## Step 2: Firebase/Firestore Setup
-
-### Create Firebase Project
-
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Click "Add project"
-3. Follow the setup wizard
-4. Enable Firestore Database:
-   - Navigate to "Firestore Database"
-   - Click "Create database"
-   - Choose production mode
-   - Select a region
-
-### Create Service Account
-
-1. Navigate to Project Settings → Service Accounts
-2. Click "Generate new private key"
-3. Download the JSON file
-4. Save it as `serviceAccountKey.json` in your project root
-5. **IMPORTANT**: Never commit this file to version control
-
-### Configure Firestore Indexes
-
-Create composite indexes for efficient queries:
-
-```javascript
-// guildId + timestamp (for moderationLogs)
-Collection: moderationLogs
-Fields: guildId (Ascending), timestamp (Descending)
-
-// guildId + timestamp (for trendLogs)
-Collection: trendLogs
-Fields: guildId (Ascending), timestamp (Ascending)
-Fields: guildId (Ascending), timestamp (Descending)
-```
-
-You can create these in the Firebase Console under Firestore → Indexes.
-
-## Step 3: Environment Configuration
-
-1. Copy the example environment file:
 ```bash
-cp .env.example .env
+firebase login
 ```
 
-2. Edit `.env` with your values:
-```env
-# Discord Configuration
-DISCORD_TOKEN=YOUR_BOT_TOKEN_FROM_STEP_1
-DISCORD_CLIENT_ID=YOUR_CLIENT_ID_FROM_STEP_1
+### 2. Initialize Firebase Project
 
-# Firebase Configuration
-FIREBASE_PROJECT_ID=your-firebase-project-id
-FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
+If not already initialized:
 
-# Bot Configuration
-SPAM_DETECTION_ENABLED=true
-DAILY_REPORT_CRON=0 9 * * *
-DAILY_REPORT_TIMEZONE=America/New_York
-```
-
-### Cron Schedule Format
-
-The cron schedule uses standard cron syntax:
-```
-* * * * *
-│ │ │ │ │
-│ │ │ │ └─── Day of week (0-7, Sunday = 0 or 7)
-│ │ │ └───── Month (1-12)
-│ │ └─────── Day of month (1-31)
-│ └───────── Hour (0-23)
-└─────────── Minute (0-59)
-```
-
-Examples:
-- `0 9 * * *` - Daily at 9:00 AM
-- `0 */6 * * *` - Every 6 hours
-- `30 8 * * 1` - Every Monday at 8:30 AM
-
-## Step 4: Installation
-
-1. Install dependencies:
 ```bash
-npm install
+firebase init
 ```
 
-2. Build the TypeScript code:
-```bash
-npm run build
-```
+Select:
+- Hosting
+- Configure as a single-page app: Yes
+- Set up automatic builds: No
+- Overwrite index.html: No
 
-3. Verify the build:
-```bash
-ls dist/
-```
+### 3. Link Firebase Project
 
-You should see compiled JavaScript files.
+Update `.firebaserc` with your actual Firebase project ID:
 
-## Step 5: Deployment Options
-
-### Option A: Local/VPS Deployment with PM2
-
-1. Install PM2 globally:
-```bash
-npm install -g pm2
-```
-
-2. Create PM2 ecosystem file (`ecosystem.config.js`):
-```javascript
-module.exports = {
-  apps: [{
-    name: 'discord-qa-bot',
-    script: './dist/index.js',
-    instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '500M',
-    env: {
-      NODE_ENV: 'production'
-    }
-  }]
-};
-```
-
-3. Start the bot:
-```bash
-pm2 start ecosystem.config.js
-```
-
-4. Save PM2 configuration:
-```bash
-pm2 save
-pm2 startup
-```
-
-5. Monitor the bot:
-```bash
-pm2 logs discord-qa-bot
-pm2 status
-```
-
-### Option B: Docker Deployment
-
-1. Create `Dockerfile`:
-```dockerfile
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY tsconfig.json ./
-COPY src ./src
-RUN npm run build
-
-COPY serviceAccountKey.json ./
-
-CMD ["node", "dist/index.js"]
-```
-
-2. Create `.dockerignore`:
-```
-node_modules
-dist
-.git
-.env
-README.md
-```
-
-3. Build and run:
-```bash
-docker build -t discord-qa-bot .
-docker run -d --name discord-qa-bot --env-file .env discord-qa-bot
-```
-
-### Option C: Cloud Platform (Heroku, Railway, etc.)
-
-1. Add a `Procfile`:
-```
-worker: node dist/index.js
-```
-
-2. Set environment variables in the platform dashboard
-
-3. Deploy via Git push or platform CLI
-
-## Step 6: Verification
-
-1. Check bot is online in Discord
-2. Test spam detection:
-   - Send a message with a URL in your Discord server
-   - Verify it gets deleted and you receive a DM
-3. Test slash commands:
-   - Run `/usage-stats`
-   - Run `/trends`
-4. Check logs:
-```bash
-# PM2
-pm2 logs discord-qa-bot
-
-# Docker
-docker logs discord-qa-bot
-
-# Direct
-tail -f logs/bot.log
-```
-
-## Step 7: Post-Deployment Configuration
-
-### Configure Guild Settings
-
-In your Discord server, use these commands:
-
-1. Add custom spam patterns:
-```
-/add-spam-pattern "unwanted-keyword"
-```
-
-2. View current patterns:
-```
-/list-spam-patterns
-```
-
-3. Check moderation history:
-```
-/moderation-history
-```
-
-### Test Daily Report
-
-Force trigger the daily report to test:
-```
-/force-daily-report
-```
-
-## Monitoring & Maintenance
-
-### Logs
-
-Monitor application logs regularly:
-- Check for Firebase connection errors
-- Monitor Discord API rate limits
-- Review spam detection false positives
-
-### Firestore Usage
-
-Monitor Firestore usage in Firebase Console:
-- Read/Write operations
-- Storage size
-- Ensure within free tier or budget
-
-### Bot Updates
-
-To update the bot:
-```bash
-git pull
-npm install
-npm run build
-pm2 restart discord-qa-bot
-```
-
-## Troubleshooting
-
-### Bot not responding
-- Check bot token is correct
-- Verify bot has required permissions
-- Check if bot is online in Discord
-
-### Spam detection not working
-- Verify `MANAGE_MESSAGES` permission
-- Check `SPAM_DETECTION_ENABLED=true` in `.env`
-- Review spam patterns with `/list-spam-patterns`
-
-### Firebase errors
-- Verify service account key path
-- Check Firebase project ID
-- Ensure Firestore is enabled
-- Verify network connectivity
-
-### Daily reports not sending
-- Check cron schedule format
-- Verify timezone setting
-- Test with `/force-daily-report`
-- Check bot can DM server owner
-
-## Security Best Practices
-
-1. **Never commit sensitive files**:
-   - `.env`
-   - `serviceAccountKey.json`
-
-2. **Rotate tokens regularly**:
-   - Discord bot token
-   - Firebase service account
-
-3. **Firestore Security Rules**:
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
-    }
+```json
+{
+  "projects": {
+    "default": "your-firebase-project-id"
   }
 }
 ```
 
-4. **Monitor access logs** in Firebase Console
+Or use the Firebase CLI:
 
-## Scaling Considerations
+```bash
+firebase use --add
+```
 
-For large deployments:
+### 4. Configure Environment Variables
 
-1. **Sharding**: Discord.js supports sharding for bots in 2500+ servers
-2. **Database**: Consider Firestore limits and quotas
-3. **Rate Limits**: Implement additional rate limiting for Discord API
-4. **Caching**: Add Redis for temporary data caching
-5. **Load Balancing**: Deploy multiple instances with proper state management
+1. Copy the example environment file:
+   ```bash
+   cd web
+   cp .env.example .env
+   ```
+
+2. Update `web/.env` with your Firebase project configuration:
+   ```
+   VITE_FIREBASE_API_KEY=your_api_key
+   VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your_project_id
+   VITE_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   VITE_FIREBASE_APP_ID=your_app_id
+   VITE_API_BASE_URL=https://your-api-domain.com
+   ```
+
+You can find these values in:
+- Firebase Console → Project Settings → General → Your apps → Web app
+
+## Building and Deploying
+
+### Quick Deploy
+
+From the project root:
+
+```bash
+npm run deploy:web
+```
+
+This will:
+1. Build the web app (`npm run build:web`)
+2. Deploy to Firebase Hosting
+
+### Manual Deploy
+
+1. **Build the app**:
+   ```bash
+   cd web
+   npm run build
+   ```
+
+2. **Test locally** (optional):
+   ```bash
+   firebase serve --only hosting
+   ```
+   
+   The app will be available at `http://localhost:5000`
+
+3. **Deploy to Firebase Hosting**:
+   ```bash
+   firebase deploy --only hosting
+   ```
+
+## Deployment with Emulators (Testing)
+
+To test deployment locally with Firebase emulators:
+
+1. **Start emulators**:
+   ```bash
+   firebase emulators:start
+   ```
+
+2. **In another terminal, serve the hosting**:
+   ```bash
+   cd web
+   npm run build
+   firebase emulators:start --only hosting
+   ```
+
+3. Access the emulator UI at `http://localhost:4000`
+
+## Production Deployment Checklist
+
+Before deploying to production:
+
+- [ ] Update `.env` with production Firebase config
+- [ ] Set `VITE_API_BASE_URL` to production backend URL
+- [ ] Test all authentication flows
+- [ ] Verify file upload functionality
+- [ ] Test server linking
+- [ ] Verify Pro tier features work correctly
+- [ ] Check responsive design on mobile
+- [ ] Test on multiple browsers
+- [ ] Review Firebase security rules
+- [ ] Set up Firebase Auth email templates
+- [ ] Configure Firebase domain (if using custom domain)
+
+## Custom Domain Setup
+
+To use a custom domain:
+
+1. In Firebase Console, go to Hosting
+2. Click "Add custom domain"
+3. Follow the wizard to verify domain ownership
+4. Update DNS records as instructed
+5. Wait for SSL certificate provisioning (can take up to 24 hours)
+
+## CI/CD Integration
+
+### GitHub Actions Example
+
+Create `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: cd web && npm ci
+        
+      - name: Build
+        run: cd web && npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          VITE_API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          
+      - name: Deploy to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          projectId: your-firebase-project-id
+          channelId: live
+```
+
+Add the following secrets to your GitHub repository:
+- `FIREBASE_API_KEY`
+- `FIREBASE_AUTH_DOMAIN`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_STORAGE_BUCKET`
+- `FIREBASE_MESSAGING_SENDER_ID`
+- `FIREBASE_APP_ID`
+- `API_BASE_URL`
+- `FIREBASE_SERVICE_ACCOUNT` (download from Firebase Console → Project Settings → Service Accounts)
+
+## Rollback
+
+To rollback to a previous deployment:
+
+1. View deployment history:
+   ```bash
+   firebase hosting:channel:list
+   ```
+
+2. Rollback to specific version:
+   ```bash
+   firebase hosting:clone SOURCE_SITE_ID:SOURCE_CHANNEL_ID TARGET_SITE_ID:live
+   ```
+
+## Monitoring
+
+Monitor your deployment:
+
+1. **Firebase Console**: https://console.firebase.google.com/
+   - Hosting dashboard for traffic and performance
+   - Authentication for user activity
+   - Firestore for database operations
+
+2. **Firebase Performance Monitoring**: Enable in Firebase Console for detailed performance metrics
+
+3. **Firebase Analytics**: Track user behavior and conversion
+
+## Troubleshooting
+
+### Build Fails
+
+- Ensure all dependencies are installed: `cd web && npm install`
+- Clear cache: `rm -rf web/node_modules web/.vite && cd web && npm install`
+- Check for TypeScript errors: `cd web && npx tsc --noEmit`
+
+### Deploy Fails
+
+- Verify Firebase CLI is logged in: `firebase login`
+- Check project ID in `.firebaserc`
+- Ensure you have deploy permissions in Firebase Console
+
+### 404 Errors After Deploy
+
+- Check that `firebase.json` has the correct rewrite rules
+- Ensure `public` points to `web/dist`
+- Rebuild the app before deploying
+
+### Environment Variables Not Working
+
+- Ensure all environment variables start with `VITE_`
+- Rebuild after changing `.env` file
+- Variables are embedded at build time, not runtime
 
 ## Support
 
-If you encounter issues:
-1. Check the logs first
-2. Review the troubleshooting section
-3. Open an issue on GitHub with logs and details
+For issues:
+1. Check Firebase Console for errors
+2. Review deployment logs: `firebase hosting:channel:list`
+3. Test locally with emulators first
+4. Review Firebase documentation: https://firebase.google.com/docs/hosting
