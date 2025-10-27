@@ -4,7 +4,7 @@ import { initializeFirebase } from '../services/firebase';
 import { configService } from '../services/configService';
 import { usageServiceLegacy } from '../services/usageService';
 import { messageProcessor } from '../services/messageProcessor';
-import { handleConfigCommand } from './commandHandler';
+import { handleConfigCommand, handleUpgradeCommand } from './commandHandler';
 
 dotenv.config();
 
@@ -47,6 +47,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
   try {
     if (interaction.commandName === 'config') {
       await handleConfigCommand(interaction);
+    } else if (interaction.commandName === 'upgrade') {
+      await handleUpgradeCommand(interaction);
     }
   } catch (error) {
     console.error('[Bot] Error handling interaction:', error);
@@ -78,13 +80,14 @@ client.on(Events.MessageCreate, async (message: Message) => {
     }
 
     const guildConfig = await configService.getGuildConfig(message.guildId);
+    const allowedChannels = guildConfig.settings?.channelIds || [];
     
-    if (!guildConfig || guildConfig.allowedChannels.length === 0) {
+    if (!guildConfig || allowedChannels.length === 0) {
       console.log(`[Bot] Skipped: No channels configured for guild ${message.guildId}`);
       return;
     }
 
-    if (!guildConfig.allowedChannels.includes(message.channelId)) {
+    if (!allowedChannels.includes(message.channelId)) {
       console.log(`[Bot] Skipped: Channel ${message.channelId} not in allowed list for guild ${message.guildId}`);
       return;
     }
@@ -95,12 +98,34 @@ client.on(Events.MessageCreate, async (message: Message) => {
       console.log(`[Bot] Quota exceeded for guild ${message.guildId}: ${quota.current}/${quota.limit}`);
       
       try {
+        const whopCheckoutUrl = process.env.WHOP_CHECKOUT_URL || 'https://whop.com/discord-qa-bot-pro/';
+        
         await message.reply(
           `⚠️ **Monthly Query Limit Reached**\n\n` +
-          `Your server has used ${quota.current} of ${quota.limit} queries this month.\n` +
-          `Please upgrade your plan or wait until next month to continue using the bot.\n\n` +
-          `Need help? Contact your server administrator.`
+          `Your server has used ${quota.current} of ${quota.limit} queries this month.\n\n` +
+          `✨ **Upgrade to Pro for unlimited messages!**\n` +
+          `Use \`/upgrade\` for more details or visit: ${whopCheckoutUrl}\n\n` +
+          `Free tier resets on the 1st of each month.`
         );
+
+        const guild = await client.guilds.fetch(message.guildId);
+        const owner = await guild.fetchOwner();
+        
+        try {
+          await owner.send(
+            `📊 **Your server "${guild.name}" has reached its monthly limit**\n\n` +
+            `The free tier includes 100 messages per month. Your server has used all ${quota.limit} queries.\n\n` +
+            `🚀 **Upgrade to Pro ($10/month) for:**\n` +
+            `• Unlimited message processing\n` +
+            `• Daily insights and analytics\n` +
+            `• Priority support\n\n` +
+            `Get started: ${whopCheckoutUrl}\n\n` +
+            `Use \`/upgrade\` in your server for more information.`
+          );
+          console.log(`[Bot] Sent upgrade DM to server owner ${owner.user.tag}`);
+        } catch (dmError) {
+          console.error('[Bot] Failed to send DM to server owner:', dmError);
+        }
       } catch (error) {
         console.error('[Bot] Failed to send quota exceeded message:', error);
       }

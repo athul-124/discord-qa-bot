@@ -5,10 +5,12 @@ A Discord Q&A bot with AI-powered knowledge base search, usage tracking, spam de
 ## Features
 
 - **Knowledge Base Management**: Parse and search knowledge bases from CSV and PDF files
-- **AI-Powered Search**: Intelligent keyword matching and relevance scoring
-- **Usage Tracking**: Monthly message limits with automatic reset
+- **AI-Powered Search**: Intelligent keyword matching and relevance scoring powered by Google Gemini
+- **Usage Tracking**: Monthly message limits with automatic reset (100 free, unlimited pro)
 - **Spam Detection**: Comprehensive spam and malicious content filtering
 - **Subscription Tiers**: Free and Pro tier support with Whop integration
+- **Easy Upgrade**: `/upgrade` slash command with Whop checkout integration
+- **Smart Notifications**: DM server owners when limits are reached with upgrade instructions
 - **Firebase/Firestore**: Cloud storage for user data and usage tracking
 
 ## Getting Started
@@ -37,6 +39,9 @@ DISCORD_BOT_TOKEN=your_discord_bot_token
 DISCORD_CLIENT_ID=your_client_id
 GEMINI_API_KEY=your_gemini_api_key
 WHOP_API_KEY=your_whop_api_key
+WHOP_PRODUCT_ID=your_whop_product_id
+WHOP_CHECKOUT_URL=https://whop.com/your-product-checkout-url
+DASHBOARD_URL=https://your-dashboard-url.com/dashboard
 
 # Firebase/Firestore settings
 FIREBASE_PROJECT_ID=your-project-id
@@ -63,6 +68,39 @@ For development with auto-reload:
 ```bash
 npm run dev
 ```
+
+### Deploying Slash Commands
+
+After setting up your bot, deploy the slash commands:
+
+```bash
+npx ts-node src/scripts/deployCommands.ts
+```
+
+## Usage
+
+### Available Commands
+
+- `/config add-channel #channel` - Add a channel where the bot will respond
+- `/config remove-channel #channel` - Remove a channel from the bot's response list
+- `/config list-channels` - List all configured channels
+- `/config set-owner contact` - Set owner contact information
+- `/upgrade` - Get information about upgrading to Pro tier
+
+### Subscription Tiers
+
+**Free Tier**
+- 100 messages per month per server
+- Automatic monthly reset on the 1st
+- All core features included
+
+**Pro Tier ($10/month)**
+- Unlimited message processing
+- Daily insights and analytics
+- Priority support
+- Advanced features
+
+Use `/upgrade` in your Discord server to see upgrade options and get your Whop checkout link.
 
 ## Testing
 
